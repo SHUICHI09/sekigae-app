@@ -51,7 +51,7 @@ else:
 
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# 共通パーツCSS ＆ 画像保存用スクリプト（JSのバグを防ぐためID指定を厳密化）
+# 共通パーツCSS ＆ 改良版・画像保存用スクリプト（あらゆる階層から執念深く要素を探すロジック）
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -137,19 +137,37 @@ st.markdown("""
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
     function downloadSeatMapAsImage(format) {
-        var element = window.parent.document.querySelector('[data-testid="stHtml"] #download-area');
+        // Streamlitの親ウィンドウ(メイン領域)から最深部まで全探索をかける改良コード
+        var targetDoc = window.parent.document;
+        var element = targetDoc.getElementById("download-area");
+        
         if (!element) {
-            element = window.parent.document.getElementById("download-area");
+            element = targetDoc.querySelector('[data-testid="stHtml"] #download-area');
         }
+        if (!element) {
+            element = document.getElementById("download-area");
+        }
+        
         if (element) {
-            html2canvas(element, { scale: 2, backgroundColor: "#ffffff" }).then(function(canvas) {
-                var link = document.createElement("a");
+            // 背景透過白埋め・高解像度化(scale:2)
+            html2canvas(element, { 
+                scale: 2, 
+                backgroundColor: "#ffffff",
+                useCORS: true,
+                logging: false
+            }).then(function(canvas) {
+                var link = targetDoc.createElement("a");
                 link.download = "席替え結果." + format;
-                link.href = canvas.toDataURL("image/" + format);
+                link.href = canvas.toDataURL("image/" + format, 0.9);
+                targetDoc.body.appendChild(link); // セキュリティ制約突破のため一時的にDOMへ追加
                 link.click();
+                targetDoc.body.removeChild(link);
+            }).catch(function(error) {
+                console.error("html2canvas error:", error);
+                alert("画像の生成中にエラーが発生しました。");
             });
         } else {
-            alert("座席表のデータが見つかりませんでした。もう一度お試しください。");
+            alert("システムエラー: 座席表エリアの検出に失敗しました。画面を少しスクロールして再試行してください。");
         }
     }
     </script>
@@ -158,15 +176,12 @@ st.markdown("""
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
 
-# 一番外側の配置を固定し、JavaScriptが要素を確実に見つけられるように変更
 main_container = st.container()
 
 with main_container:
-    # 状態に応じて表示を出し分け
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
         tab_setup, tab_csv, tab_run = st.tabs(["1. 座席の形を決める", "2. 名簿を読み込む", "3. ルーレットを回す"])
     else:
-        # ルーレット中・完了後はタブを消して結果画面のみにする
         tab_run = st.container()
 
     # --- タブ1：座席レイアウト設定 ---
@@ -215,7 +230,6 @@ with main_container:
             df = st.session_state.final_df
             limit_count = min(len(active_coords), len(df))
             
-            # 設定値を保持
             if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
                 st.sidebar.header("各種調整")
                 num_students = st.sidebar.number_input("参加人数", 1, limit_count, limit_count)
@@ -230,14 +244,12 @@ with main_container:
             roulette_placeholder = st.empty()
             skip_btn_placeholder = st.empty()
             
-            # ダウンロードUI用のコンテナを上に配置
             download_ui_placeholder = st.container()
-            
             grid_area_placeholder = st.empty()
             
             # 座席表描画関数
             def draw_current_grid():
-                html = "<div id='download-area' style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px;'>"
+                html = "<div id='download-area' style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
                 html += "<div class='classroom-grid'>"
                 for r in range(7):
@@ -256,13 +268,11 @@ with main_container:
 
             draw_current_grid()
             
-            # ステータス表示とダウンロード処理
             if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
                 roulette_placeholder.html("<div class='roulette-container'><div class='roulette-target-seat'>READY</div><div class='roulette-big-name' style='color: #94a3b8; font-size: 45px;'>「ルーレットを開始する」ボタンを押してください</div></div>")
             elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
                 roulette_placeholder.html("<div class='roulette-container' style='background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>COMPLETE</div><div class='roulette-big-name' style='color: #14532d; font-size: 54px;'>席替え完了</div></div>")
                 
-                # --- 🛠️ 拡張子選択ダウンロード機能の追加 ---
                 with download_ui_placeholder:
                     st.markdown("### 💾 席替え結果の保存・書き出し")
                     dl_col1, dl_col2, dl_col3 = st.columns([2, 2, 1])
@@ -270,7 +280,6 @@ with main_container:
                     file_format = dl_col1.selectbox("保存するファイル形式（拡張子）を選択", ["PNG形式 (画像)", "JPEG形式 (画像)", "CSV形式 (データ)"])
                     
                     if "CSV形式" in file_format:
-                        # 席替え結果をCSV用データに変換
                         export_data = []
                         for (r, c), info in st.session_state.confirmed_seats.items():
                             export_data.append({
@@ -280,9 +289,9 @@ with main_container:
                                 "点数": info["score"]
                             })
                         export_df = pd.DataFrame(export_data).sort_values(by=["列", "番"])
-                        csv_bytes = export_df.to_csv(index=False).encode('utf-8-sig') # Excel化け対策のBOM付き
+                        csv_bytes = export_df.to_csv(index=False).encode('utf-8-sig')
                         
-                        dl_col2.write("") # 位置微調整
+                        dl_col2.write("") 
                         dl_col2.write("") 
                         dl_col2.download_button(
                             label="📥 CSVファイルをダウンロード",
@@ -292,7 +301,6 @@ with main_container:
                             use_container_width=True
                         )
                     else:
-                        # 画像保存(PNG/JPEG)
                         img_type = "png" if "PNG" in file_format else "jpeg"
                         dl_col2.write("") 
                         dl_col2.write("") 
