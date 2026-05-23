@@ -86,8 +86,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎰 BIGルーレット式 席替えエンタメシステム")
-
 # --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
     st.session_state.seat_map = [[True for _ in range(6)] for _ in range(7)]
