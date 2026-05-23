@@ -4,7 +4,7 @@ import pandas as pd
 import time
 
 # 画面設定
-st.set_page_config(page_title="🎨 PREMIUM NEON - 席替えアプリ", layout="wide")
+st.set_page_config(page_title=" PREMIUM NEON - 席替えアプリ", layout="wide")
 
 # --- 🧠 バリアフリー ＆ サイバーダークCSS ---
 st.markdown("""
@@ -120,7 +120,7 @@ if 'roulette_running' not in st.session_state:
     st.session_state.roulette_running = False
 
 # タブ設定
-tab_setup, tab_csv, tab_run = st.tabs(["🪑 ① 座席の形を決める", "📊 ② 名簿を読み込む", "🎲 ③ ルーレットを回す"])
+tab_setup, tab_csv, tab_run = st.tabs([" ① 座席の形を決める", " ② 名簿を読み込む", " ③ ルーレットを回す"])
 
 # --- タブ1：座席レイアウト設定 ---
 with tab_setup:
@@ -175,7 +175,7 @@ with tab_run:
         # 画面構築プレースホルダー
         roulette_placeholder = st.empty()
         skip_btn_placeholder = st.empty()
-        st.markdown("<div style='text-align:center; background:#1e293b; color:#38bdf8; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #38bdf8;'>【 教 壇 】</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; background:#1e293b; color:#38bdf8; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #38bdf8;'>【教卓】</div>", unsafe_allow_html=True)
         grid_placeholder = st.empty()
         
         # 座席グリッドの描画（アクセシビリティ対応デザイン）
@@ -193,9 +193,9 @@ with tab_run:
                             lightness = 85 - int((score / 100) * 45) 
                             text_color = "#000000" if lightness > 50 else "#ffffff"
                             
-                            html += f"<div class='seat-box' style='background-color: hsl(190, 90%, {lightness}%); color: {text_color}; border: 2px solid #38bdf8;'>👤 {name}<br><span style='font-size:12px; font-weight:bold; opacity:0.8;'>{score}点</span></div>"
+                            html += f"<div class='seat-box' style='background-color: hsl(190, 90%, {lightness}%); color: {text_color}; border: 2px solid #38bdf8;'> {name}<br><span style='font-size:12px; font-weight:bold; opacity:0.8;'>{score}点</span></div>"
                         else:
-                            html += "<div class='seat-box' style='background-color: #1e293b; border: 2px dashed #475569; color: #94a3b8;'>🪑 空席</div>"
+                            html += "<div class='seat-box' style='background-color: #1e293b; border: 2px dashed #475569; color: #94a3b8;'> 空席</div>"
                     else:
                         html += "<div class='seat-box' style='background-color: #0f172a; border: 2px solid #1e293b; color: #475569; box-shadow:none;'>× 通路</div>"
             html += "</div>"
@@ -214,7 +214,7 @@ with tab_run:
         elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
             roulette_placeholder.html("""
                 <div class='roulette-container' style='background: linear-gradient(135deg, #064e3b, #111827); border-color: #00e676;'>
-                    <div class='roulette-target-seat' style='color: #00e676;'>🎉 COMPLETE</div>
+                    <div class='roulette-target-seat' style='color: #00e676;'> COMPLETE</div>
                     <div class='roulette-big-name' style='color: #ffffff; font-size: 54px;'> 席替え完了 </div>
                 </div>
             """)
@@ -291,7 +291,7 @@ with tab_run:
                     
                 roulette_placeholder.html(f"""
                     <div class='roulette-container' style='background: linear-gradient(135deg, #1e1b4b, #064e3b); border-color: #00e676;'>
-                        <div class='roulette-target-seat' style='color: #00e676;'>　確定しました！</div>
+                        <div class='roulette-target-seat' style='color: #00e676;'> 確定しました！</div>
                         <div class='roulette-big-name' style='color: #00e676; font-size: 85px;'> {winner}</div>
                     </div>
                 """)
