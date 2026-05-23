@@ -4,43 +4,43 @@ import pandas as pd
 import time
 
 # 画面設定
-st.set_page_config(page_title=" PREMIUM NEON - 席替えアプリ", layout="wide")
+st.set_page_config(page_title="席替えアプリ", layout="wide")
 
-# --- 🧠 バリアフリー ＆ サイバーダークCSS --
+# --- バリアフリー ＆ クリーンライトCSS ---
 st.markdown("""
     <style>
-    /* 全体の背景とテキスト色の変更 */
+    /* 全体の背景とテキスト色の変更（白基調） */
     .stApp {
-        background-color: #0f172a !important;
-        color: #f8fafc !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
     }
     
-    /* タブの見た目をダークモードに最適化 */
+    /* タブの見た目をライトモードに最適化 */
     button[data-baseweb="tab"] {
-        color: #94a3b8 !important;
+        color: #64748b !important;
         font-size: 18px !important;
         font-weight: bold !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #38bdf8 !important;
-        border-bottom-color: #38bdf8 !important;
+        color: #0284c7 !important;
+        border-bottom-color: #0284c7 !important;
     }
 
-    /* ボタンのカスタマイズ（直感的な記号と高コントラスト） */
+    /* ボタンのカスタマイズ（高コントラスト設計） */
     div.stButton > button[kind="primary"] {
-        background-color: #00e676 !important; /* 鮮やかなユニバーサルグリーン */
-        color: #000000 !important;
-        font-weight: 900 !important;
-        font-size: 18px !important;
-        border: 2px solid #00e676 !important;
-        border-radius: 8px;
-    }
-    div.stButton > button[kind="secondary"] {
-        background-color: #ff3d00 !important; /* 識別しやすいビビッドレッド */
+        background-color: #10b981 !important; /* ユニバーサルグリーン */
         color: #ffffff !important;
         font-weight: 900 !important;
         font-size: 18px !important;
-        border: 2px solid #ff3d00 !important;
+        border: 2px solid #10b981 !important;
+        border-radius: 8px;
+    }
+    div.stButton > button[kind="secondary"] {
+        background-color: #ef4444 !important; /* ビビッドレッド */
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        font-size: 18px !important;
+        border: 2px solid #ef4444 !important;
         border-radius: 8px;
     }
     
@@ -52,45 +52,45 @@ st.markdown("""
         margin-top: 20px;
     }
     
-    /* 座席ボックスの基本（文字を大きく、認識しやすく） */
+    /* 座席ボックスの基本（大文字で見やすく） */
     .seat-box {
         border-radius: 12px;
         padding: 20px 10px;
         text-align: center;
         font-weight: bold;
-        font-size: 20px; /* 遠くからでも見える大きさ */
+        font-size: 20px;
         min-height: 90px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
         transition: all 0.2s;
     }
     
-    /* 🔥 演出：超巨大ルーレット画面（ネオンサイバーテイスト） */
+    /* 演出：超巨大ルーレット画面（爽快なサイバーライトテイスト） */
     .roulette-container {
-        background: linear-gradient(135deg, #111827, #1e1b4b);
+        background: linear-gradient(135deg, #f0fdf4, #e0f2fe);
         border-radius: 16px;
         padding: 50px 20px;
         text-align: center;
-        color: #ffffff;
-        box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+        color: #0f172a;
+        box-shadow: 0 10px 25px rgba(2, 132, 199, 0.15);
         margin-bottom: 25px;
-        border: 4px solid #38bdf8; /* ネオンブルーの枠線 */
+        border: 4px solid #0284c7; /* ディープブルーの枠線 */
     }
     .roulette-target-seat {
         font-size: 26px;
         font-weight: 800;
-        color: #38bdf8;
+        color: #0284c7;
         letter-spacing: 1px;
         margin-bottom: 15px;
     }
     .roulette-big-name {
-        font-size: 80px; /* 圧倒的視認性 */
+        font-size: 80px;
         font-weight: 900;
         letter-spacing: 4px;
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         margin: 20px 0;
         min-height: 120px;
         display: flex;
@@ -99,15 +99,17 @@ st.markdown("""
     }
     .roulette-spinning {
         animation: neon-pulse 0.1s infinite alternate;
-        color: #ccff00; /* 目立つ蛍光イエローグリーン */
+        color: #b45309;
     }
     @keyframes neon-pulse {
-        0% { transform: scale(0.98); opacity: 0.9; }
-        100% { transform: scale(1.02); opacity: 1; }
+        0% { transform: scale(0.98); }
+        100% { transform: scale(1.02); }
     }
     </style>
 """, unsafe_allow_html=True)
 
+st.title("PREMIUM LIGHT 席替えシステム")
+st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調 ＆ 単一カラーのスマート座席表")
 
 # --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
@@ -120,19 +122,20 @@ if 'roulette_running' not in st.session_state:
     st.session_state.roulette_running = False
 
 # タブ設定
-tab_setup, tab_csv, tab_run = st.tabs([" ① 座席の形を決める", " ② 名簿を読み込む", " ③ ルーレットを回す"])
+tab_setup, tab_csv, tab_run = st.tabs(["1. 座席の形を決める", "2. 名簿を読み込む", "3. ルーレットを回す"])
 
 # --- タブ1：座席レイアウト設定 ---
 with tab_setup:
     st.subheader("使用する座席をタップして指定してください")
-    st.markdown("<div style='text-align:center; background:#1e293b; color:#38bdf8; padding:15px; border-radius:8px; margin-bottom:25px; font-weight:bold; font-size:20px; border: 2px solid #38bdf8;'>【教卓】（こちらが前方です）</div>", unsafe_allow_html=True)
+    st.write("※ 通路にしたい場所をタップすると切り替わります。")
+    st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:15px; border-radius:8px; margin-bottom:25px; font-weight:bold; font-size:20px; border: 2px solid #0284c7;'>【教卓】（こちらが前方です）</div>", unsafe_allow_html=True)
     
     for r in range(7):
         cols = st.columns(6)
         for c in range(6):
             active = st.session_state.seat_map[r][c]
             b_type = "primary" if active else "secondary"
-            b_label = f"席 ({r+1}-{c+1})" if active else f"通路"
+            b_label = f"座席 ({r+1}-{c+1})" if active else f"通路"
             if cols[c].button(b_label, key=f"s_{r}_{c}", type=b_type, use_container_width=True):
                 st.session_state.seat_map[r][c] = not active
                 st.rerun()
@@ -155,14 +158,14 @@ with tab_csv:
             st.error(f"エラー: {e}")
 
     if st.session_state.final_df is not None:
-        st.success("名簿の読み込みに成功しました！")
+        st.success("名簿の読み込みに成功しました。")
         st.info("数値を変更したい場合は、下の表のセルをダブルクリックして直接編集できます。")
         st.session_state.final_df = st.data_editor(st.session_state.final_df, disabled=["出席番号"], hide_index=True, use_container_width=True)
 
 # --- タブ3：ルーレット実行タブ ---
 with tab_run:
     if st.session_state.final_df is None:
-        st.error("先に『名簿を読み込む』タブで名簿データを準備してください。")
+        st.error("先に『2. 名簿を読み込む』タブで名簿データを準備してください。")
     else:
         active_coords = [(r, c) for r in range(7) for c in range(6) if st.session_state.seat_map[r][c]]
         df = st.session_state.final_df
@@ -175,10 +178,10 @@ with tab_run:
         # 画面構築プレースホルダー
         roulette_placeholder = st.empty()
         skip_btn_placeholder = st.empty()
-        st.markdown("<div style='text-align:center; background:#1e293b; color:#38bdf8; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #38bdf8;'>【教卓】</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0;'>【教卓】</div>", unsafe_allow_html=True)
         grid_placeholder = st.empty()
         
-        # 座席グリッドの描画（アクセシビリティ対応デザイン）
+        # 座席グリッドの描画
         def draw_current_grid():
             html = "<div class='classroom-grid'>"
             for r in range(7):
@@ -188,16 +191,11 @@ with tab_run:
                             name = st.session_state.confirmed_seats[(r, c)]["name"]
                             score = st.session_state.confirmed_seats[(r, c)]["score"]
                             
-                            # 視認性の高いシアン（青緑系）のグラデーション
-                            # 高得点ほど濃いシアン、低得点ほど明るいネオンシアン（白文字が見えやすいように調整）
-                            lightness = 85 - int((score / 100) * 45) 
-                            text_color = "#000000" if lightness > 50 else "#ffffff"
-                            
-                            html += f"<div class='seat-box' style='background-color: hsl(190, 90%, {lightness}%); color: {text_color}; border: 2px solid #38bdf8;'> {name}<br><span style='font-size:12px; font-weight:bold; opacity:0.8;'>{score}点</span></div>"
+                            html += f"<div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'>{name}<br><span style='font-size:12px; font-weight:bold; color: #64748b;'>{score}点</span></div>"
                         else:
-                            html += "<div class='seat-box' style='background-color: #1e293b; border: 2px dashed #475569; color: #94a3b8;'> 空席</div>"
+                            html += "<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>"
                     else:
-                        html += "<div class='seat-box' style='background-color: #0f172a; border: 2px solid #1e293b; color: #475569; box-shadow:none;'>× 通路</div>"
+                        html += "<div class='seat-box' style='background-color: #ffffff; border: 2px solid #f1f5f9; color: #cbd5e1; box-shadow:none;'>通路</div>"
             html += "</div>"
             grid_placeholder.html(html)
 
@@ -208,14 +206,14 @@ with tab_run:
             roulette_placeholder.html("""
                 <div class='roulette-container'>
                     <div class='roulette-target-seat'>READY</div>
-                    <div class='roulette-big-name' style='color: #475569; font-size: 45px;'>左メニューからスタートしてください</div>
+                    <div class='roulette-big-name' style='color: #94a3b8; font-size: 45px;'>左メニューからスタートしてください</div>
                 </div>
             """)
         elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
             roulette_placeholder.html("""
-                <div class='roulette-container' style='background: linear-gradient(135deg, #064e3b, #111827); border-color: #00e676;'>
-                    <div class='roulette-target-seat' style='color: #00e676;'> COMPLETE</div>
-                    <div class='roulette-big-name' style='color: #ffffff; font-size: 54px;'> 席替え完了 </div>
+                <div class='roulette-container' style='background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #10b981;'>
+                    <div class='roulette-target-seat' style='color: #10b981;'>COMPLETE</div>
+                    <div class='roulette-big-name' style='color: #14532d; font-size: 54px;'>席替え完了</div>
                 </div>
             """)
 
@@ -290,9 +288,9 @@ with tab_run:
                     break
                     
                 roulette_placeholder.html(f"""
-                    <div class='roulette-container' style='background: linear-gradient(135deg, #1e1b4b, #064e3b); border-color: #00e676;'>
-                        <div class='roulette-target-seat' style='color: #00e676;'> 確定しました！</div>
-                        <div class='roulette-big-name' style='color: #00e676; font-size: 85px;'> {winner}</div>
+                    <div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'>
+                        <div class='roulette-target-seat' style='color: #10b981;'>確定しました</div>
+                        <div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div>
                     </div>
                 """)
                 
