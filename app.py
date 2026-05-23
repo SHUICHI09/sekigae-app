@@ -4,87 +4,112 @@ import pandas as pd
 import time
 
 # 画面設定
-st.set_page_config(page_title="完全動作版・席替えアプリ", layout="wide")
+st.set_page_config(page_title="🎨 PREMIUM NEON - 席替えアプリ", layout="wide")
 
-# --- 演出用CSSインジェクション ---
+# --- 🧠 バリアフリー ＆ サイバーダークCSS ---
 st.markdown("""
     <style>
-    div.stButton > button[kind="primary"] {
-        background-color: #00ff7f !important;
-        color: #111 !important;
-        font-weight: bold !important;
-        border: none;
-    }
-    div.stButton > button[kind="secondary"] {
-        background-color: #cd5c5c !important;
-        color: white !important;
-        border: none;
+    /* 全体の背景とテキスト色の変更 */
+    .stApp {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
     }
     
+    /* タブの見た目をダークモードに最適化 */
+    button[data-baseweb="tab"] {
+        color: #94a3b8 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #38bdf8 !important;
+        border-bottom-color: #38bdf8 !important;
+    }
+
+    /* ボタンのカスタマイズ（直感的な記号と高コントラスト） */
+    div.stButton > button[kind="primary"] {
+        background-color: #00e676 !important; /* 鮮やかなユニバーサルグリーン */
+        color: #000000 !important;
+        font-weight: 900 !important;
+        font-size: 18px !important;
+        border: 2px solid #00e676 !important;
+        border-radius: 8px;
+    }
+    div.stButton > button[kind="secondary"] {
+        background-color: #ff3d00 !important; /* 識別しやすいビビッドレッド */
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        font-size: 18px !important;
+        border: 2px solid #ff3d00 !important;
+        border-radius: 8px;
+    }
+    
+    /* 教室のグリッド表示 */
     .classroom-grid {
         display: grid;
         grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
-        margin-top: 15px;
+        gap: 16px;
+        margin-top: 20px;
     }
+    
+    /* 座席ボックスの基本（文字を大きく、認識しやすく） */
     .seat-box {
-        background-color: #f8fafc;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 15px 5px;
+        border-radius: 12px;
+        padding: 20px 10px;
         text-align: center;
         font-weight: bold;
-        min-height: 75px;
+        font-size: 20px; /* 遠くからでも見える大きさ */
+        min-height: 90px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        transition: all 0.2s;
     }
-    .seat-disabled {
-        background-color: #f1f5f9;
-        border: 2px dashed #cbd5e1;
-        color: #94a3b8;
-    }
-
+    
+    /* 🔥 演出：超巨大ルーレット画面（ネオンサイバーテイスト） */
     .roulette-container {
-        background: linear-gradient(135deg, #1e3a8a, #0d9488);
-        border-radius: 15px;
-        padding: 40px;
+        background: linear-gradient(135deg, #111827, #1e1b4b);
+        border-radius: 16px;
+        padding: 50px 20px;
         text-align: center;
-        color: white;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        margin-bottom: 20px;
-        border: 3px solid #ffd700;
+        color: #ffffff;
+        box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+        margin-bottom: 25px;
+        border: 4px solid #38bdf8; /* ネオンブルーの枠線 */
     }
     .roulette-target-seat {
-        font-size: 24px;
-        font-weight: bold;
-        color: #ffd700;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        margin-bottom: 10px;
+        font-size: 26px;
+        font-weight: 800;
+        color: #38bdf8;
+        letter-spacing: 1px;
+        margin-bottom: 15px;
     }
     .roulette-big-name {
-        font-size: 72px; 
+        font-size: 80px; /* 圧倒的視認性 */
         font-weight: 900;
-        letter-spacing: 2px;
-        text-shadow: 0 4px 10px rgba(0,0,0,0.7);
+        letter-spacing: 4px;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
         margin: 20px 0;
-        min-height: 108px;
+        min-height: 120px;
         display: flex;
         justify-content: center;
         align-items: center;
     }
     .roulette-spinning {
-        animation: shake 0.1s infinite alternate;
-        color: #ffff00;
+        animation: neon-pulse 0.1s infinite alternate;
+        color: #ccff00; /* 目立つ蛍光イエローグリーン */
     }
-    @keyframes shake {
-        0% { transform: translate(1px, 1px) rotate(0deg); }
-        100% { transform: translate(-1px, -2px) rotate(0.5deg); }
+    @keyframes neon-pulse {
+        0% { transform: scale(0.98); opacity: 0.9; }
+        100% { transform: scale(1.02); opacity: 1; }
     }
     </style>
 """, unsafe_allow_html=True)
+
+st.title("🎰 PREMIUM NEON 席替えシステム")
+st.caption("【ユニバーサルデザイン設計】視覚疲労を抑えるダークモード ＆ 色だけに頼らない識別レイアウト")
 
 # --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
@@ -97,26 +122,28 @@ if 'roulette_running' not in st.session_state:
     st.session_state.roulette_running = False
 
 # タブ設定
-tab_setup, tab_csv, tab_run = st.tabs(["🪑 座席レイアウト設定", "📊 名簿CSV読込・調整", "🎲 ルーレット席替え"])
+tab_setup, tab_csv, tab_run = st.tabs(["🪑 ① 座席の形を決める", "📊 ② 名簿を読み込む", "🎲 ③ ルーレットを回す"])
 
 # --- タブ1：座席レイアウト設定 ---
 with tab_setup:
-    st.subheader("座席の配置設定")
-    st.markdown("<div style='text-align:center; background:#1e293b; color:white; padding:12px; border-radius:5px; margin-bottom:20px; font-weight:bold;'>【 教 壇 】</div>", unsafe_allow_html=True)
+    st.subheader("使用する座席をタップして指定してください")
+    st.write("※ 色覚に関わらず判別できるよう、文字（🟢/❌）を併記しています。")
+    st.markdown("<div style='text-align:center; background:#1e293b; color:#38bdf8; padding:15px; border-radius:8px; margin-bottom:25px; font-weight:bold; font-size:20px; border: 2px solid #38bdf8;'>【 教 壇 】（こちらが前方です）</div>", unsafe_allow_html=True)
+    
     for r in range(7):
         cols = st.columns(6)
         for c in range(6):
             active = st.session_state.seat_map[r][c]
             b_type = "primary" if active else "secondary"
-            b_label = f"座席 ({r+1}-{c+1})" if active else f"×"
+            b_label = f"🟢 席 ({r+1}-{c+1})" if active else f"❌ 通路"
             if cols[c].button(b_label, key=f"s_{r}_{c}", type=b_type, use_container_width=True):
                 st.session_state.seat_map[r][c] = not active
                 st.rerun()
 
 # --- タブ2：CSVファイル読み込み・編集タブ ---
 with tab_csv:
-    st.subheader("名簿データのインポート")
-    uploaded_file = st.file_uploader("CSVファイルをアップロードしてください", type=["csv"])
+    st.subheader("名簿CSVデータのインポート")
+    uploaded_file = st.file_uploader("CSVファイルをここにドラッグ＆ドロップしてください", type=["csv"])
     if uploaded_file is not None:
         try:
             try:
@@ -131,29 +158,30 @@ with tab_csv:
             st.error(f"エラー: {e}")
 
     if st.session_state.final_df is not None:
-        st.info("💡 必要があれば、その場で点数をダブルクリックして書き換えられます。")
+        st.success("名簿の読み込みに成功しました！")
+        st.info("💡 数値を変更したい場合は、下の表のセルをダブルクリックして直接編集できます。")
         st.session_state.final_df = st.data_editor(st.session_state.final_df, disabled=["出席番号"], hide_index=True, use_container_width=True)
 
 # --- タブ3：ルーレット実行タブ ---
 with tab_run:
     if st.session_state.final_df is None:
-        st.error("先に『📊 名簿CSV読込・調整』タブで名簿データを読み込んでください。")
+        st.error("先に『📊 ② 名簿を読み込む』タブで名簿データを準備してください。")
     else:
         active_coords = [(r, c) for r in range(7) for c in range(6) if st.session_state.seat_map[r][c]]
         df = st.session_state.final_df
         limit_count = min(len(active_coords), len(df))
         
-        st.sidebar.header("ルーレット設定")
+        st.sidebar.header("各種調整")
         num_students = st.sidebar.number_input("参加人数", 1, limit_count, limit_count)
-        speed = st.sidebar.slider("ルーレットの回転速度（秒）", 0.05, 0.3, 0.08, step=0.01)
+        speed = st.sidebar.slider("シャッフル速度（秒）", 0.04, 0.2, 0.06, step=0.01)
         
-        # 画面構築用のプレースホルダー
+        # 画面構築プレースホルダー
         roulette_placeholder = st.empty()
         skip_btn_placeholder = st.empty()
-        st.markdown("<div style='text-align:center; background:#1e293b; color:white; padding:10px; border-radius:5px; font-weight:bold;'>【 教 壇 】</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; background:#1e293b; color:#38bdf8; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #38bdf8;'>【 教 壇 】</div>", unsafe_allow_html=True)
         grid_placeholder = st.empty()
         
-        # 座席グリッドの描画関数
+        # 座席グリッドの描画（アクセシビリティ対応デザイン）
         def draw_current_grid():
             html = "<div class='classroom-grid'>"
             for r in range(7):
@@ -162,31 +190,35 @@ with tab_run:
                         if (r, c) in st.session_state.confirmed_seats:
                             name = st.session_state.confirmed_seats[(r, c)]["name"]
                             score = st.session_state.confirmed_seats[(r, c)]["score"]
-                            hue = 120 + int((score / 100) * 90) if score is not None else 210
-                            html += f"<div class='seat-box' style='background-color: hsl({hue}, 80%, 90%); border: 2px solid hsl({hue}, 60%, 70%);'>{name}<br><span style='font-size:11px; color:#64748b;'>{score}点</span></div>"
+                            
+                            # 視認性の高いシアン（青緑系）のグラデーション
+                            # 高得点ほど濃いシアン、低得点ほど明るいネオンシアン（白文字が見えやすいように調整）
+                            lightness = 85 - int((score / 100) * 45) 
+                            text_color = "#000000" if lightness > 50 else "#ffffff"
+                            
+                            html += f"<div class='seat-box' style='background-color: hsl(190, 90%, {lightness}%); color: {text_color}; border: 2px solid #38bdf8;'>👤 {name}<br><span style='font-size:12px; font-weight:bold; opacity:0.8;'>{score}点</span></div>"
                         else:
-                            html += "<div class='seat-box' style='color:#94a3b8;'>🪑 空席</div>"
+                            html += "<div class='seat-box' style='background-color: #1e293b; border: 2px dashed #475569; color: #94a3b8;'>🪑 空席</div>"
                     else:
-                        html += "<div class='seat-box seat-disabled'>✖ 通路</div>"
+                        html += "<div class='seat-box' style='background-color: #0f172a; border: 2px solid #1e293b; color: #475569; box-shadow:none;'>× 通路</div>"
             html += "</div>"
             grid_placeholder.html(html)
 
-        # 常時、最新の座席状態を描画
         draw_current_grid()
         
-        # 状態に応じた初期表示
+        # 初期状態のルーレット画面
         if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
             roulette_placeholder.html("""
                 <div class='roulette-container'>
                     <div class='roulette-target-seat'>🎰 READY</div>
-                    <div class='roulette-big-name' style='color: #94a3b8;'>サイドバーからルーレットを開始してください</div>
+                    <div class='roulette-big-name' style='color: #475569; font-size: 45px;'>左メニューからスタートしてください</div>
                 </div>
             """)
         elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
             roulette_placeholder.html("""
-                <div class='roulette-container' style='background: #1e293b; border-color: #cbd5e1;'>
-                    <div class='roulette-target-seat' style='color: #94a3b8;'>🎉 COMPLETE</div>
-                    <div class='roulette-big-name' style='color: #ffffff; font-size: 54px;'>席替えが完了しました！</div>
+                <div class='roulette-container' style='background: linear-gradient(135deg, #064e3b, #111827); border-color: #00e676;'>
+                    <div class='roulette-target-seat' style='color: #00e676;'>🎉 COMPLETE</div>
+                    <div class='roulette-big-name' style='color: #ffffff; font-size: 54px;'>✨ 席替え完了 ✨</div>
                 </div>
             """)
 
@@ -220,8 +252,8 @@ with tab_run:
                 
                 st.session_state.roulette_running = False
 
-        # ルーレット開始
-        if st.sidebar.button("🎰 ルーレットスタート！", type="primary", use_container_width=True):
+        # ルーレット実行
+        if st.sidebar.button("⚡ ルーレットを開始する", type="primary", use_container_width=True):
             st.session_state.confirmed_seats = {}
             st.session_state.roulette_running = True
             
@@ -243,7 +275,7 @@ with tab_run:
                 
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
                 
-                skip_btn_placeholder.button("⚡ 演出をスキップして一気に完成させる", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
+                skip_btn_placeholder.button("⏩ 演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
                 
                 for tick in range(12):
                     if not st.session_state.roulette_running:
@@ -251,7 +283,7 @@ with tab_run:
                     dummy_name = random.choice(names_pool)
                     roulette_placeholder.html(f"""
                         <div class='roulette-container'>
-                            <div class='roulette-target-seat'>🎯 第 {idx+1} 席 抽選中... 【 {r+1}列目 - {c+1}番 】</div>
+                            <div class='roulette-target-seat'>🎯 【 {r+1}列目 - {c+1}番 】の抽選中...</div>
                             <div class='roulette-big-name roulette-spinning'>{dummy_name}</div>
                         </div>
                     """)
@@ -261,9 +293,9 @@ with tab_run:
                     break
                     
                 roulette_placeholder.html(f"""
-                    <div class='roulette-container' style='background: linear-gradient(135deg, #15803d, #166534); border-color: #00ff7f;'>
-                        <div class='roulette-target-seat' style='color: #ffffff;'>✨ 第 {idx+1} 席 確定！ 【 {r+1}列目 - {c+1}番 】</div>
-                        <div class='roulette-big-name' style='color: #00ff7f; font-size: 84px;'>👑 {winner}</div>
+                    <div class='roulette-container' style='background: linear-gradient(135deg, #1e1b4b, #064e3b); border-color: #00e676;'>
+                        <div class='roulette-target-seat' style='color: #00e676;'>✨ 確定しました！</div>
+                        <div class='roulette-big-name' style='color: #00e676; font-size: 85px;'>👑 {winner}</div>
                     </div>
                 """)
                 
