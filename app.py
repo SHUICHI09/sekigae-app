@@ -256,12 +256,42 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
-            # スキップ処理 (スキップ時も席位置による確率傾斜を適用)
+            # 💡 【コア処理】動的な確率の重み付け計算関数
+            def calculate_dynamic_weights(names_list, score_map, disp_num):
+                # 生徒全体の最高点・最低点を取得（点数のスケーリング用）
+                all_scores = list(score_map.values())
+                max_score = max(all_scores) if all_scores else 100
+                min_score = min(all_scores) if all_scores else 0
+                score_range = max(1, max_score - min_score)
+                
+                weights = []
+                for name in names_list:
+                    student_score = float(score_map[name])
+                    
+                    # 生徒の点数を 0.0 (最低) 〜 1.0 (最高) に標準化
+                    norm_score = (student_score - min_score) / score_range
+                    
+                    # 席の番号(disp_num: 1〜7)を 0.0 (①番) 〜 1.0 (⑦番) に標準化
+                    # これにより、①番の席では「低い子」、⑦番の席では「高い子」の比重を最大にする
+                    seat_ratio = (disp_num - 1) / 6.0
+                    
+                    # 💡 席位置と生徒の点数の相性スコア（完全連動ロジック）
+                    # seat_ratio が 0 (①番) のとき -> (1.0 - norm_score) となり、点数が低い子ほど大
+                    # seat_ratio が 1 (⑦番) のとき -> norm_score となり、点数が高い子ほど大
+                    match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
+                    
+                    # 確率が完全に0になって詰まらないよう、最低値を0.05に保証
+                    weight = max(0.05, match_factor)
+                    weights.append(weight)
+                return weights
+
+            # スキップ処理
             def trigger_skip():
                 if st.session_state.roulette_running:
                     current_pool = df.head(num_students).copy()
                     names_pool = current_pool["名前"].tolist()
                     num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
+                    score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
                     
                     already_chosen = [v["name"] for v in st.session_state.confirmed_seats.values()]
                     for name in already_chosen:
@@ -274,12 +304,8 @@ with main_container:
                         if not names_pool:
                             break
                         
-                        # 💡 席の位置（後ろの番ほど確率アップ、1番はハズレ傾向）
                         _, disp_num = get_seat_label(r, c)
-                        seat_weight = float(disp_num) # 1番=重み1.0, 7番=重み7.0
-                        
-                        # 全員一律のベース確率に、席ごとの引く力を掛け合わせる
-                        weights = [seat_weight for _ in names_pool]
+                        weights = calculate_dynamic_weights(names_pool, score_map, disp_num)
                         
                         winner = random.choices(names_pool, weights=weights, k=1)[0]
                         st.session_state.confirmed_seats[(r, c)] = {"name": winner, "num": num_map[winner]}
@@ -297,17 +323,16 @@ with main_container:
             current_pool = df.head(num_students).copy()
             names_pool = current_pool["名前"].tolist()
             num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
+            score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
 
             for idx, (r, c) in enumerate(active_coords):
                 if not st.session_state.roulette_running or not names_pool:
                     break
                 
-                # 💡 ここで座席の「番」に応じて抽選確率に傾斜をつけます
-                # 1番（教卓前）は重み1.0、7番（一番後ろ）は重み7.0になり、後ろの席ほど当選しやすくなります
                 disp_col, disp_num = get_seat_label(r, c)
-                seat_weight = float(disp_num)
                 
-                weights = [seat_weight for _ in names_pool]
+                # 動的に重みを計算（点数と席の①〜⑦番の完全連動）
+                weights = calculate_dynamic_weights(names_pool, score_map, disp_num)
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
                 
                 skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
