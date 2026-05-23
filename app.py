@@ -4,7 +4,7 @@ import pandas as pd
 import time
 
 # 画面設定
-st.set_page_config(page_title="席替えアプリ", layout="wide")
+st.set_page_config(page_title="PREMIUM LIGHT - 席替えアプリ", layout="wide")
 
 # --- バリアフリー ＆ クリーンライトCSS ---
 st.markdown("""
@@ -13,6 +13,12 @@ st.markdown("""
     .stApp {
         background-color: #ffffff !important;
         color: #0f172a !important;
+    }
+    
+    /* 🛠️ サイドバーの幅を細く制限する設定（最大240px） */
+    section[data-testid="stSidebar"] {
+        min-width: 180px !important;
+        max-width: 240px !important;
     }
     
     /* タブの見た目をライトモードに最適化 */
@@ -31,9 +37,10 @@ st.markdown("""
         background-color: #10b981 !important; /* ユニバーサルグリーン */
         color: #ffffff !important;
         font-weight: 900 !important;
-        font-size: 18px !important;
+        font-size: 20px !important; /* 中央移動に伴いボタンを少し大きく */
         border: 2px solid #10b981 !important;
         border-radius: 8px;
+        padding: 10px 20px !important;
     }
     div.stButton > button[kind="secondary"] {
         background-color: #ef4444 !important; /* ビビッドレッド */
@@ -173,7 +180,10 @@ with tab_run:
         
         st.sidebar.header("各種調整")
         num_students = st.sidebar.number_input("参加人数", 1, limit_count, limit_count)
-        speed = st.sidebar.slider("シャッフル速度（秒）", 0.04, 0.2, 0.06, step=0.01)
+        speed = st.sidebar.slider("シャッフル速度（秒）", 0.04, 0.2, 0.08, step=0.01)
+        
+        # 🛠️ ルーレット開始ボタンをサイドバーから中央のこの位置へ移動しました
+        start_btn_placeholder = st.empty()
         
         # 画面構築プレースホルダー
         roulette_placeholder = st.empty()
@@ -206,7 +216,7 @@ with tab_run:
             roulette_placeholder.html("""
                 <div class='roulette-container'>
                     <div class='roulette-target-seat'>READY</div>
-                    <div class='roulette-big-name' style='color: #94a3b8; font-size: 45px;'>左メニューからスタートしてください</div>
+                    <div class='roulette-big-name' style='color: #94a3b8; font-size: 45px;'>「ルーレットを開始する」ボタンを押してください</div>
                 </div>
             """)
         elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
@@ -247,10 +257,17 @@ with tab_run:
                 
                 st.session_state.roulette_running = False
 
+        # 🛠️ タブ3が実行されている時のみ、中央に開始ボタンを表示する
+        if not st.session_state.roulette_running:
+            start_trigger = start_btn_placeholder.button("ルーレットを開始する", type="primary", use_container_width=True)
+        else:
+            start_trigger = False
+
         # ルーレット実行
-        if st.sidebar.button("ルーレットを開始する", type="primary", use_container_width=True):
+        if start_trigger:
             st.session_state.confirmed_seats = {}
             st.session_state.roulette_running = True
+            start_btn_placeholder.empty() # 実行中は開始ボタンを隠す
             
             current_pool = df.head(num_students).copy()
             names_pool = current_pool["名前"].tolist()
