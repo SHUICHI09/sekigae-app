@@ -6,7 +6,7 @@ import time
 # 画面設定
 st.set_page_config(page_title="PREMIUM LIGHT - 席替えアプリ", layout="wide")
 
-# --- バリアフリー ＆ クリーンライトCSS ---
+# --- バリアフリー ＆ クリーンライトCSS ＆ 画像ダウンロード用スクリプト ---
 st.markdown("""
     <style>
     /* 全体の背景とテキスト色の変更（白基調） */
@@ -15,7 +15,7 @@ st.markdown("""
         color: #0f172a !important;
     }
     
-    /* 🛠️ サイドバーの幅を細く制限する設定（最大240px） */
+    /* サイドバーの幅を細く制限する設定（最大240px） */
     section[data-testid="stSidebar"] {
         min-width: 180px !important;
         max-width: 240px !important;
@@ -37,7 +37,7 @@ st.markdown("""
         background-color: #10b981 !important; /* ユニバーサルグリーン */
         color: #ffffff !important;
         font-weight: 900 !important;
-        font-size: 20px !important; /* 中央移動に伴いボタンを少し大きく */
+        font-size: 20px !important;
         border: 2px solid #10b981 !important;
         border-radius: 8px;
         padding: 10px 20px !important;
@@ -59,7 +59,7 @@ st.markdown("""
         margin-top: 20px;
     }
     
-    /* 座席ボックスの基本（大文字で見やすく） */
+    /* 座席ボックスの基本 */
     .seat-box {
         border-radius: 12px;
         padding: 20px 10px;
@@ -75,7 +75,7 @@ st.markdown("""
         transition: all 0.2s;
     }
     
-    /* 演出：超巨大ルーレット画面（爽快なサイバーライトテイスト） */
+    /* 演出：超巨大ルーレット画面 */
     .roulette-container {
         background: linear-gradient(135deg, #f0fdf4, #e0f2fe);
         border-radius: 16px;
@@ -84,7 +84,7 @@ st.markdown("""
         color: #0f172a;
         box-shadow: 0 10px 25px rgba(2, 132, 199, 0.15);
         margin-bottom: 25px;
-        border: 4px solid #0284c7; /* ディープブルーの枠線 */
+        border: 4px solid #0284c7;
     }
     .roulette-target-seat {
         font-size: 26px;
@@ -113,7 +113,35 @@ st.markdown("""
         100% { transform: scale(1.02); }
     }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+    function downloadSeatMap() {
+        var element = window.parent.document.getElementById("download-area");
+        if (element) {
+            html2canvas(element, { scale: 2, backgroundColor: "#ffffff" }).then(function(canvas) {
+                var link = document.createElement("a");
+                link.download = "席替え結果.png";
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            });
+        }
+    }
+    </script>
 """, unsafe_allow_html=True)
+
+# 🛠️ ルーレット実行中、プログラムから強制的にサイドバーを閉じる
+# 「完了しても開けなくていい」ため、完了後（Falseの時）に自動で開くスクリプトを除去しました
+if 'roulette_running' in st.session_state and st.session_state.roulette_running:
+    st.markdown("""
+        <script>
+        var sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
+        var button = window.parent.document.querySelector('button[aria-label="Collapse sidebar"]');
+        if (sidebar && sidebar.getAttribute('aria-expanded') === 'true' && button) {
+            button.click();
+        }
+        </script>
+    """, unsafe_allow_html=True)
 
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調 ＆ 単一カラーのスマート座席表")
@@ -180,20 +208,26 @@ with tab_run:
         
         st.sidebar.header("各種調整")
         num_students = st.sidebar.number_input("参加人数", 1, limit_count, limit_count)
-        speed = st.sidebar.slider("シャッフル速度（秒）", 0.04, 0.2, 0.08, step=0.01)
+        speed = st.sidebar.slider("シャッフル速度（秒）", 0.04, 0.2, 0.06, step=0.01)
         
-        # 🛠️ ルーレット開始ボタンをサイドバーから中央のこの位置へ移動しました
+        # 各種ボタン・画面用プレースホルダー
         start_btn_placeholder = st.empty()
-        
-        # 画面構築プレースホルダー
         roulette_placeholder = st.empty()
         skip_btn_placeholder = st.empty()
-        st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0;'>【教卓】</div>", unsafe_allow_html=True)
+        
+        # 🛠️ 画像保存用ボタンの追加（席替え完了時のみ表示できるようにします）
+        save_btn_placeholder = st.empty()
+        
+        # HTML画像化の対象範囲の開始タグを指定
+        grid_top_placeholder = st.empty()
         grid_placeholder = st.empty()
         
         # 座席グリッドの描画
         def draw_current_grid():
-            html = "<div class='classroom-grid'>"
+            grid_top_placeholder.html("<div id='download-area' style='padding:20px; background:#ffffff;'>")
+            
+            html = "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0;'>【教卓】</div>"
+            html += "<div class='classroom-grid'>"
             for r in range(7):
                 for c in range(6):
                     if st.session_state.seat_map[r][c]:
@@ -206,12 +240,12 @@ with tab_run:
                             html += "<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>"
                     else:
                         html += "<div class='seat-box' style='background-color: #ffffff; border: 2px solid #f1f5f9; color: #cbd5e1; box-shadow:none;'>通路</div>"
-            html += "</div>"
+            html += "</div></div>"
             grid_placeholder.html(html)
 
         draw_current_grid()
         
-        # 初期状態のルーレット画面
+        # 初期状態・完了状態のルーレット画面
         if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
             roulette_placeholder.html("""
                 <div class='roulette-container'>
@@ -226,6 +260,9 @@ with tab_run:
                     <div class='roulette-big-name' style='color: #14532d; font-size: 54px;'>席替え完了</div>
                 </div>
             """)
+            # 🛠️ 完了時に「画像として保存する」ボタンを生成
+            if save_btn_placeholder.button("📷 この座席表を画像(PNG)として保存する", use_container_width=True):
+                st.markdown("<script>downloadSeatMap();</script>", unsafe_allow_html=True)
 
         # スキップ処理
         def trigger_skip():
@@ -257,7 +294,7 @@ with tab_run:
                 
                 st.session_state.roulette_running = False
 
-        # 🛠️ タブ3が実行されている時のみ、中央に開始ボタンを表示する
+        # 中央に開始ボタンを表示
         if not st.session_state.roulette_running:
             start_trigger = start_btn_placeholder.button("ルーレットを開始する", type="primary", use_container_width=True)
         else:
@@ -267,55 +304,60 @@ with tab_run:
         if start_trigger:
             st.session_state.confirmed_seats = {}
             st.session_state.roulette_running = True
-            start_btn_placeholder.empty() # 実行中は開始ボタンを隠す
-            
-            current_pool = df.head(num_students).copy()
-            names_pool = current_pool["名前"].tolist()
-            scores_pool = current_pool["点数"].tolist()
-            score_map = {n: s for n, s in zip(names_pool, scores_pool)}
+            start_btn_placeholder.empty()
+            st.rerun()
 
-            for idx, (r, c) in enumerate(active_coords):
+    # ルーレットアニメーション処理
+    if st.session_state.final_df is not None and st.session_state.roulette_running:
+        active_coords = [(r, c) for r in range(7) for c in range(6) if st.session_state.seat_map[r][c]]
+        df = st.session_state.final_df
+        current_pool = df.head(num_students).copy()
+        names_pool = current_pool["名前"].tolist()
+        scores_pool = current_pool["点数"].tolist()
+        score_map = {n: s for n, s in zip(names_pool, scores_pool)}
+
+        for idx, (r, c) in enumerate(active_coords):
+            if not st.session_state.roulette_running:
+                break
+            if not names_pool:
+                break
+            
+            current_scores = [score_map[n] for n in names_pool]
+            max_score = max(current_scores) if current_scores else 100
+            weights = [(max_score + 1) - s for s in current_scores]
+            weights = [max(0.1, float(w)) for w in weights]
+            
+            winner = random.choices(names_pool, weights=weights, k=1)[0]
+            
+            skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
+            
+            for tick in range(12):
                 if not st.session_state.roulette_running:
                     break
-                if not names_pool:
-                    break
-                
-                current_scores = [score_map[n] for n in names_pool]
-                max_score = max(current_scores) if current_scores else 100
-                weights = [(max_score + 1) - s for s in current_scores]
-                weights = [max(0.1, float(w)) for w in weights]
-                
-                winner = random.choices(names_pool, weights=weights, k=1)[0]
-                
-                skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
-                
-                for tick in range(12):
-                    if not st.session_state.roulette_running:
-                        break
-                    dummy_name = random.choice(names_pool)
-                    roulette_placeholder.html(f"""
-                        <div class='roulette-container'>
-                            <div class='roulette-target-seat'>【 {r+1}列目 - {c+1}番 】の抽選中...</div>
-                            <div class='roulette-big-name roulette-spinning'>{dummy_name}</div>
-                        </div>
-                    """)
-                    time.sleep(speed)
-                
-                if not st.session_state.roulette_running:
-                    break
-                    
+                dummy_name = random.choice(names_pool)
                 roulette_placeholder.html(f"""
-                    <div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'>
-                        <div class='roulette-target-seat' style='color: #10b981;'>確定しました</div>
-                        <div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div>
+                    <div class='roulette-container'>
+                        <div class='roulette-target-seat'>【 {r+1}列目 - {c+1}番 】の抽選中...</div>
+                        <div class='roulette-big-name roulette-spinning'>{dummy_name}</div>
                     </div>
                 """)
+                time.sleep(speed)
+            
+            if not st.session_state.roulette_running:
+                break
                 
-                st.session_state.confirmed_seats[(r, c)] = {"name": winner, "score": score_map[winner]}
-                draw_current_grid()
-                names_pool.remove(winner)
-                time.sleep(0.5)
+            roulette_placeholder.html(f"""
+                <div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'>
+                    <div class='roulette-target-seat' style='color: #10b981;'>確定しました</div>
+                    <div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div>
+                </div>
+            """)
+            
+            st.session_state.confirmed_seats[(r, c)] = {"name": winner, "score": score_map[winner]}
+            draw_current_grid()
+            names_pool.remove(winner)
+            time.sleep(0.5)
 
-            st.session_state.roulette_running = False
-            skip_btn_placeholder.empty()
-            st.rerun()
+        st.session_state.roulette_running = False
+        skip_btn_placeholder.empty()
+        st.rerun()
