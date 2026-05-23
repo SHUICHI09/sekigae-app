@@ -16,9 +16,9 @@ if 'confirmed_seats' not in st.session_state:
 if 'roulette_running' not in st.session_state:
     st.session_state.roulette_running = False
 
-# --- 🛠️ 超強力・サイドバー完全封鎖CSS ＆ スクリプト ---
-if st.session_state.roulette_running:
-    # ルーレット実行中は、サイドバーの存在自体をブラウザから完全に抹消するCSS
+# --- 🛠️ 完了後も閉じたままにする強力CSS制御 ---
+# ルーレット実行中、またはすでに結果（confirmed_seats）がある場合はサイドバーを完全に消去する
+if st.session_state.roulette_running or st.session_state.confirmed_seats:
     sidebar_style = """
     <style>
     section[data-testid="stSidebar"] {
@@ -28,7 +28,7 @@ if st.session_state.roulette_running:
         max-width: 0px !important;
     }
     button[aria-label="Expand sidebar"] {
-        display: none !important; /* 開くボタンすら消去 */
+        display: none !important; /* 左上の「＞」ボタンも非表示にして完全に閉じ込める */
     }
     .stApp {
         background-color: #ffffff !important;
@@ -37,7 +37,7 @@ if st.session_state.roulette_running:
     </style>
     """
 else:
-    # 通常時は見やすいライトモード用の設定
+    # 最初の座席設定や名簿読み込みの時はサイドバーを表示
     sidebar_style = """
     <style>
     .stApp {
@@ -53,7 +53,7 @@ else:
 
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# 共通のパーツCSSと画像保存スクリプト
+# 共通パーツCSS ＆ 画像保存用スクリプト
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -155,16 +155,15 @@ st.markdown("""
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
 
-# --- タブ初期化バグの防止対策 ---
-# ルーレット実行中は、Streamlitのバグを引き起こす st.tabs 自体を表示しない形式に固定
-if not st.session_state.roulette_running:
+# --- タブ表示制御 ---
+# ルーレット中、または完了後はタブを非表示にして大画面化を維持
+if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
     tab_setup, tab_csv, tab_run = st.tabs(["1. 座席の形を決める", "2. 名簿を読み込む", "3. ルーレットを回す"])
 else:
-    # 実行中はタブのガワを消してメインコンテナに直接描画
     tab_run = st.container()
 
 # --- タブ1：座席レイアウト設定 ---
-if not st.session_state.roulette_running:
+if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
     with tab_setup:
         st.subheader("使用する座席をタップして指定してください")
         st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:15px; border-radius:8px; margin-bottom:25px; font-weight:bold; font-size:20px; border: 2px solid #0284c7;'>【教卓】（こちらが前方です）</div>", unsafe_allow_html=True)
@@ -179,7 +178,7 @@ if not st.session_state.roulette_running:
                     st.rerun()
 
 # --- タブ2：CSVファイル読み込み・編集タブ ---
-if not st.session_state.roulette_running:
+if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
     with tab_csv:
         st.subheader("名簿CSVデータのインポート")
         uploaded_file = st.file_uploader("CSVファイルをここにドラッグ＆ドロップしてください", type=["csv"])
@@ -209,16 +208,14 @@ with tab_run:
         df = st.session_state.final_df
         limit_count = min(len(active_coords), len(df))
         
-        # 🛠️ ルーレット実行中で「ない」ときだけサイドバーに設定項目を出す（バグ回避の最重要ポイント）
-        if not st.session_state.roulette_running:
+        # 設定値を保持するロジック
+        if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
             st.sidebar.header("各種調整")
             num_students = st.sidebar.number_input("参加人数", 1, limit_count, limit_count)
             speed = st.sidebar.slider("シャッフル速度（秒）", 0.04, 0.2, 0.06, step=0.01)
-            # 値を保持するための仕組み
             st.session_state.saved_num_students = num_students
             st.session_state.saved_speed = speed
         else:
-            # 実行中は保存された値を使用
             num_students = st.session_state.saved_num_students
             speed = st.session_state.saved_speed
         
@@ -228,7 +225,7 @@ with tab_run:
         save_btn_placeholder = st.empty()
         grid_area_placeholder = st.empty()
         
-        # 座席表描画
+        # 座席表描画関数
         def draw_current_grid():
             html = "<div id='download-area' style='padding:20px; background:#ffffff;'>"
             html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -249,15 +246,22 @@ with tab_run:
 
         draw_current_grid()
         
+        # ステータス表示
         if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
             roulette_placeholder.html("<div class='roulette-container'><div class='roulette-target-seat'>READY</div><div class='roulette-big-name' style='color: #94a3b8; font-size: 45px;'>「ルーレットを開始する」ボタンを押してください</div></div>")
         elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
             roulette_placeholder.html("<div class='roulette-container' style='background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>COMPLETE</div><div class='roulette-big-name' style='color: #14532d; font-size: 54px;'>席替え完了</div></div>")
             
-            # 画像保存ボタン
-            if save_btn_placeholder.button("📷 この座席表を画像(PNG)として保存する", use_container_width=True):
+            # 画像保存ボタン ＆ リセットして最初からやり直すボタンを横並びで配置
+            col1, col2 = st.columns(2)
+            if col1.button("📷 この座席表を画像(PNG)として保存する", use_container_width=True):
                 st.markdown("<script>downloadSeatMap();</script>", unsafe_allow_html=True)
+            if col2.button("🔄 もう一度最初から設定する", use_container_width=True):
+                st.session_state.confirmed_seats = {}
+                st.session_state.roulette_running = False
+                st.rerun()
 
+        # スキップ処理
         def trigger_skip():
             if st.session_state.roulette_running:
                 current_pool = df.head(num_students).copy()
@@ -282,13 +286,13 @@ with tab_run:
                     names_pool.remove(winner)
                 st.session_state.roulette_running = False
 
-        if not st.session_state.roulette_running:
+        if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
             if start_btn_placeholder.button("ルーレットを開始する", type="primary", use_container_width=True):
                 st.session_state.confirmed_seats = {}
                 st.session_state.roulette_running = True
                 st.rerun()
 
-    # --- ルーレット処理本体 ---
+    # --- ルーレットアニメーション処理 ---
     if st.session_state.final_df is not None and st.session_state.roulette_running:
         current_pool = df.head(num_students).copy()
         names_pool = current_pool["名前"].tolist()
