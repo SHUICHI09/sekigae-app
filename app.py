@@ -16,7 +16,7 @@ if 'confirmed_seats' not in st.session_state:
 if 'roulette_running' not in st.session_state:
     st.session_state.roulette_running = False
 
-# --- 🛠️ サイドバー完全封鎖CSS ＆ スクリプト ---
+# --- 🛠️ サイドバー完全封鎖CSS ---
 if st.session_state.roulette_running or st.session_state.confirmed_seats:
     sidebar_style = """
     <style>
@@ -51,7 +51,7 @@ else:
 
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# 共通パーツCSS ＆ 改良版・画像保存用スクリプト（あらゆる階層から執念深く要素を探すロジック）
+# 共通パーツCSS
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -133,44 +133,6 @@ st.markdown("""
         100% { transform: scale(1.02); }
     }
     </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script>
-    function downloadSeatMapAsImage(format) {
-        // Streamlitの親ウィンドウ(メイン領域)から最深部まで全探索をかける改良コード
-        var targetDoc = window.parent.document;
-        var element = targetDoc.getElementById("download-area");
-        
-        if (!element) {
-            element = targetDoc.querySelector('[data-testid="stHtml"] #download-area');
-        }
-        if (!element) {
-            element = document.getElementById("download-area");
-        }
-        
-        if (element) {
-            // 背景透過白埋め・高解像度化(scale:2)
-            html2canvas(element, { 
-                scale: 2, 
-                backgroundColor: "#ffffff",
-                useCORS: true,
-                logging: false
-            }).then(function(canvas) {
-                var link = targetDoc.createElement("a");
-                link.download = "席替え結果." + format;
-                link.href = canvas.toDataURL("image/" + format, 0.9);
-                targetDoc.body.appendChild(link); // セキュリティ制約突破のため一時的にDOMへ追加
-                link.click();
-                targetDoc.body.removeChild(link);
-            }).catch(function(error) {
-                console.error("html2canvas error:", error);
-                alert("画像の生成中にエラーが発生しました。");
-            });
-        } else {
-            alert("システムエラー: 座席表エリアの検出に失敗しました。画面を少しスクロールして再試行してください。");
-        }
-    }
-    </script>
 """, unsafe_allow_html=True)
 
 st.title("PREMIUM LIGHT 席替えシステム")
@@ -244,12 +206,12 @@ with main_container:
             roulette_placeholder = st.empty()
             skip_btn_placeholder = st.empty()
             
-            download_ui_placeholder = st.container()
+            reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
-            # 座席表描画関数
+            # 座席表描画関数 (点数を廃止し、上部に出席番号を配置)
             def draw_current_grid():
-                html = "<div id='download-area' style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
+                html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
                 html += "<div class='classroom-grid'>"
                 for r in range(7):
@@ -257,8 +219,8 @@ with main_container:
                         if st.session_state.seat_map[r][c]:
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
-                                score = st.session_state.confirmed_seats[(r, c)]["score"]
-                                html += f"<div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'>{name}<br><span style='font-size:12px; font-weight:bold; color: #64748b;'>{score}点</span></div>"
+                                num = st.session_state.confirmed_seats[(r, c)]["num"]
+                                html += f"<div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'><span style='font-size:13px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番</span>{name}</div>"
                             else:
                                 html += "<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>"
                         else:
@@ -273,43 +235,9 @@ with main_container:
             elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
                 roulette_placeholder.html("<div class='roulette-container' style='background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>COMPLETE</div><div class='roulette-big-name' style='color: #14532d; font-size: 54px;'>席替え完了</div></div>")
                 
-                with download_ui_placeholder:
-                    st.markdown("### 💾 席替え結果の保存・書き出し")
-                    dl_col1, dl_col2, dl_col3 = st.columns([2, 2, 1])
-                    
-                    file_format = dl_col1.selectbox("保存するファイル形式（拡張子）を選択", ["PNG形式 (画像)", "JPEG形式 (画像)", "CSV形式 (データ)"])
-                    
-                    if "CSV形式" in file_format:
-                        export_data = []
-                        for (r, c), info in st.session_state.confirmed_seats.items():
-                            export_data.append({
-                                "列": r + 1,
-                                "番": c + 1,
-                                "名前": info["name"],
-                                "点数": info["score"]
-                            })
-                        export_df = pd.DataFrame(export_data).sort_values(by=["列", "番"])
-                        csv_bytes = export_df.to_csv(index=False).encode('utf-8-sig')
-                        
-                        dl_col2.write("") 
-                        dl_col2.write("") 
-                        dl_col2.download_button(
-                            label="📥 CSVファイルをダウンロード",
-                            data=csv_bytes,
-                            file_name="席替え結果.csv",
-                            mime="text/csv",
-                            use_container_width=True
-                        )
-                    else:
-                        img_type = "png" if "PNG" in file_format else "jpeg"
-                        dl_col2.write("") 
-                        dl_col2.write("") 
-                        if dl_col2.button(f"📷 {img_type.upper()}画像として保存・ダウンロード", use_container_width=True):
-                            st.markdown(f"<script>downloadSeatMapAsImage('{img_type}');</script>", unsafe_allow_html=True)
-                    
-                    dl_col3.write("")
-                    dl_col3.write("")
-                    if dl_col3.button("🔄 最初からやり直す", use_container_width=True):
+                # 最初からやり直すボタンのみを配置
+                with reset_ui_placeholder:
+                    if st.button("🔄 もう一度最初からやり直す", use_container_width=True):
                         st.session_state.confirmed_seats = {}
                         st.session_state.roulette_running = False
                         st.rerun()
@@ -319,6 +247,7 @@ with main_container:
                 if st.session_state.roulette_running:
                     current_pool = df.head(num_students).copy()
                     names_pool = current_pool["名前"].tolist()
+                    num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
                     score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
                     
                     already_chosen = [v["name"] for v in st.session_state.confirmed_seats.values()]
@@ -335,7 +264,7 @@ with main_container:
                         max_score = max(current_scores) if current_scores else 100
                         weights = [max(0.1, float((max_score + 1) - s)) for s in current_scores]
                         winner = random.choices(names_pool, weights=weights, k=1)[0]
-                        st.session_state.confirmed_seats[(r, c)] = {"name": winner, "score": score_map[winner]}
+                        st.session_state.confirmed_seats[(r, c)] = {"name": winner, "num": num_map[winner]}
                         names_pool.remove(winner)
                     st.session_state.roulette_running = False
 
@@ -349,6 +278,7 @@ with main_container:
         if st.session_state.final_df is not None and st.session_state.roulette_running:
             current_pool = df.head(num_students).copy()
             names_pool = current_pool["名前"].tolist()
+            num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
             score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
 
             for idx, (r, c) in enumerate(active_coords):
@@ -374,7 +304,7 @@ with main_container:
                     
                 roulette_placeholder.html(f"<div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>確定しました</div><div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div></div>")
                 
-                st.session_state.confirmed_seats[(r, c)] = {"name": winner, "score": score_map[winner]}
+                st.session_state.confirmed_seats[(r, c)] = {"name": winner, "num": num_map[winner]}
                 draw_current_grid()
                 names_pool.remove(winner)
                 time.sleep(0.5)
