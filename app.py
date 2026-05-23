@@ -88,7 +88,7 @@ st.markdown("""
 
 st.title("🎰 BIGルーレット式 席替えエンタメシステム")
 
-# --- Session State の初期化（リロード対策で記憶領域を強化） ---
+# --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
     st.session_state.seat_map = [[True for _ in range(6)] for _ in range(7)]
 if 'final_df' not in st.session_state:
@@ -173,10 +173,10 @@ with tab_run:
             html += "</div>"
             grid_placeholder.html(html)
 
-        # 常時、最新の座席状態を描画しておく
+        # 常時、最新の座席状態を描画
         draw_current_grid()
         
-        # 状態に応じた上部ルーレット画面の初期表示
+        # 状態に応じた初期表示
         if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
             roulette_placeholder.html("""
                 <div class='roulette-container'>
@@ -192,22 +192,19 @@ with tab_run:
                 </div>
             """)
 
-        # スキップボタンが押された時の処理（コールバック）
+        # スキップ処理
         def trigger_skip():
             if st.session_state.roulette_running:
-                # ルーレット処理はすでに別ループで走っているため、残りの全席をここで計算して一気につめる
                 current_pool = df.head(num_students).copy()
-                names_pool = current_pool["開名" if "開名" in current_pool.columns else "名前"].tolist()
+                names_pool = current_pool["名前"].tolist()
                 scores_pool = current_pool["点数"].tolist()
                 score_map = {n: s for n, s in zip(names_pool, scores_pool)}
                 
-                # すでに決まった名前を除く
                 already_chosen = [v["name"] for v in st.session_state.confirmed_seats.values()]
                 for name in already_chosen:
                     if name in names_pool:
                         names_pool.remove(name)
                 
-                # 残りの席を瞬時に埋める
                 for (r, c) in active_coords:
                     if (r, c) in st.session_state.confirmed_seats:
                         continue
@@ -225,9 +222,9 @@ with tab_run:
                 
                 st.session_state.roulette_running = False
 
-        # ルーレット開始処理
+        # ルーレット開始
         if st.sidebar.button("🎰 ルーレットスタート！", type="primary", use_container_width=True):
-            st.session_state.confirmed_seats = {} # 前回の結果をクリア
+            st.session_state.confirmed_seats = {}
             st.session_state.roulette_running = True
             
             current_pool = df.head(num_students).copy()
@@ -235,9 +232,7 @@ with tab_run:
             scores_pool = current_pool["点数"].tolist()
             score_map = {n: s for n, s in zip(names_pool, scores_pool)}
 
-            # 1人ずつのループ開始
             for idx, (r, c) in enumerate(active_coords):
-                # 途中でスキップボタンが押されてrunningがFalseになったらループを抜ける
                 if not st.session_state.roulette_running:
                     break
                 if not names_pool:
@@ -250,10 +245,8 @@ with tab_run:
                 
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
                 
-                # ルーレット画面直下にスキップボタンを表示（押されたらtrigger_skipを実行）
                 skip_btn_placeholder.button("⚡ 演出をスキップして一気に完成させる", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
                 
-                # パラパラアニメーション
                 for tick in range(12):
                     if not st.session_state.roulette_running:
                         break
@@ -269,7 +262,6 @@ with tab_run:
                 if not st.session_state.roulette_running:
                     break
                     
-                # 1人確定表示
                 roulette_placeholder.html(f"""
                     <div class='roulette-container' style='background: linear-gradient(135deg, #15803d, #166534); border-color: #00ff7f;'>
                         <div class='roulette-target-seat' style='color: #ffffff;'>✨ 第 {idx+1} 席 確定！ 【 {r+1}列目 - {c+1}番 】</div>
@@ -284,4 +276,4 @@ with tab_run:
 
             st.session_state.roulette_running = False
             skip_btn_placeholder.empty()
-            st.rerun() # 最終表示を確定させるために1回リロード
+            st.rerun()
