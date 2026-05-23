@@ -6,7 +6,7 @@ import time
 # 画面設定
 st.set_page_config(page_title=" PREMIUM NEON - 席替えアプリ", layout="wide")
 
-# --- 🧠 バリアフリー ＆ サイバーダークCSS ---
+# --- 🧠 バリアフリー ＆ サイバーダークCSS --
 st.markdown("""
     <style>
     /* 全体の背景とテキスト色の変更 */
