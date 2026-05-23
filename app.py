@@ -92,7 +92,7 @@ st.markdown("""
         text-align: center;
         font-weight: bold;
         font-size: 20px;
-        min-height: 90px;
+        min-height: 110px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -118,7 +118,7 @@ st.markdown("""
     .roulette-big-name {
         font-size: 80px;
         font-weight: 900;
-        margin: 20px 0;
+        margin: 10px 0;
         min-height: 120px;
         display: flex;
         justify-content: center;
@@ -197,7 +197,6 @@ with main_container:
         if st.session_state.final_df is None:
             st.error("先に『2. 名簿を読み込む』タブで名簿データを準備してください。")
         else:
-            # 抽選順：1列目の1番〜7番、次に2列目の1番〜7番...
             active_coords = []
             for c in reversed(range(6)):
                 for r in range(7):
@@ -224,7 +223,7 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
-            # 座席表描画関数
+            # 座席表描画関数 (当選確率の表示スペースを追加)
             def draw_current_grid():
                 html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -235,11 +234,12 @@ with main_container:
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
-                                html += f"<div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'><span style='font-size:13px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番</span>{name}</div>"
+                                prob = st.session_state.confirmed_seats[(r, c)]["prob"]
+                                html += f"<div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'><span style='font-size:13px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番</span>{name}<span style='font-size:12px; color:#0284c7; font-weight:normal; margin-top:4px; background:#ffffff; padding:1px 8px; border-radius:20px; border:1px solid #bdf0ff;'>確率: {prob}%</span></div>"
                             else:
                                 html += "<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>"
                         else:
-                            html += "<div class='seat-box' style='background-color: #ffffff; border: 2px solid #f1f5f9; color: #cbd5e1; box-shadow:none;'>通路</div>"
+                            html += "<div class='seat-box' style='background-color: #ffffff; border: 2px solid #f1f5f9; color: #cbd5e1; box-shadow:none; min-height:110px;'>通路</div>"
                 html += "</div></div>"
                 grid_area_placeholder.html(html)
 
@@ -256,9 +256,8 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
-            # 💡 【コア処理】動的な確率の重み付け計算関数
+            # 動的な確率の重み付け計算関数
             def calculate_dynamic_weights(names_list, score_map, disp_num):
-                # 生徒全体の最高点・最低点を取得（点数のスケーリング用）
                 all_scores = list(score_map.values())
                 max_score = max(all_scores) if all_scores else 100
                 min_score = min(all_scores) if all_scores else 0
@@ -267,20 +266,9 @@ with main_container:
                 weights = []
                 for name in names_list:
                     student_score = float(score_map[name])
-                    
-                    # 生徒の点数を 0.0 (最低) 〜 1.0 (最高) に標準化
                     norm_score = (student_score - min_score) / score_range
-                    
-                    # 席の番号(disp_num: 1〜7)を 0.0 (①番) 〜 1.0 (⑦番) に標準化
-                    # これにより、①番の席では「低い子」、⑦番の席では「高い子」の比重を最大にする
                     seat_ratio = (disp_num - 1) / 6.0
-                    
-                    # 💡 席位置と生徒の点数の相性スコア（完全連動ロジック）
-                    # seat_ratio が 0 (①番) のとき -> (1.0 - norm_score) となり、点数が低い子ほど大
-                    # seat_ratio が 1 (⑦番) のとき -> norm_score となり、点数が高い子ほど大
                     match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
-                    
-                    # 確率が完全に0になって詰まらないよう、最低値を0.05に保証
                     weight = max(0.05, match_factor)
                     weights.append(weight)
                 return weights
@@ -307,8 +295,16 @@ with main_container:
                         _, disp_num = get_seat_label(r, c)
                         weights = calculate_dynamic_weights(names_pool, score_map, disp_num)
                         
+                        # 💡 当選確率をパーセンテージで計算
+                        total_w = sum(weights)
+                        prob_map = {names_pool[i]: round((weights[i] / total_w) * 100, 1) for i in range(len(names_pool))}
+                        
                         winner = random.choices(names_pool, weights=weights, k=1)[0]
-                        st.session_state.confirmed_seats[(r, c)] = {"name": winner, "num": num_map[winner]}
+                        st.session_state.confirmed_seats[(r, c)] = {
+                            "name": winner, 
+                            "num": num_map[winner],
+                            "prob": prob_map[winner]
+                        }
                         names_pool.remove(winner)
                     st.session_state.roulette_running = False
 
@@ -330,10 +326,14 @@ with main_container:
                     break
                 
                 disp_col, disp_num = get_seat_label(r, c)
-                
-                # 動的に重みを計算（点数と席の①〜⑦番の完全連動）
                 weights = calculate_dynamic_weights(names_pool, score_map, disp_num)
+                
+                # 💡 この席における各生徒のリアルタイム当選確率を算出(％)
+                total_w = sum(weights)
+                prob_map = {names_pool[i]: round((weights[i] / total_w) * 100, 1) for i in range(len(names_pool))}
+                
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
+                winner_prob = prob_map[winner]
                 
                 skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
                 
@@ -346,13 +346,18 @@ with main_container:
                 
                 if not st.session_state.roulette_running:
                     break
-                    
-                roulette_placeholder.html(f"<div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>確定しました</div><div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div></div>")
                 
-                st.session_state.confirmed_seats[(r, c)] = {"name": winner, "num": num_map[winner]}
+                # 💡 ルーレット結果表示エリアにも確率を表示
+                roulette_placeholder.html(f"<div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>【{disp_col}列-{disp_num}番】に {winner_prob}% の確率で当選！</div><div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div></div>")
+                
+                st.session_state.confirmed_seats[(r, c)] = {
+                    "name": winner, 
+                    "num": num_map[winner],
+                    "prob": winner_prob
+                }
                 draw_current_grid()
                 names_pool.remove(winner)
-                time.sleep(0.5)
+                time.sleep(0.7) # 確率をみんなで確認できるように少しだけ余韻を長く(0.5s -> 0.7s)
 
             st.session_state.roulette_running = False
             skip_btn_placeholder.empty()
