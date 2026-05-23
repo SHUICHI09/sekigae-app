@@ -108,8 +108,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🎰 PREMIUM NEON 席替えシステム")
-st.caption("【ユニバーサルデザイン設計】視覚疲労を抑えるダークモード ＆ 色だけに頼らない識別レイアウト")
 
 # --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
