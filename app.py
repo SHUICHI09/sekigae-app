@@ -138,8 +138,7 @@ st.markdown("""
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
 
-# 右上を1-1、右下を1-7にするためのインデックス変換ヘルパー関数
-# 画面上の行 (r: 0~6), 列 (c: 0~5) を 「○列目-○番」に変換する
+# インデックス変換ヘルパー関数 (右上を1-1、右下を1-7にする)
 def get_seat_label(r, c):
     display_col = 6 - c  # 一番右(c=5)が1列目、一番左(c=0)が6列目
     display_num = r + 1  # 一番上(r=0)が1番、一番下(r=6)が7番
@@ -164,7 +163,6 @@ with main_container:
                     active = st.session_state.seat_map[r][c]
                     b_type = "primary" if active else "secondary"
                     
-                    # ラベルをご指定の規則（右上基準）に変更
                     disp_col, disp_num = get_seat_label(r, c)
                     b_label = f"座席 ({disp_col}-{disp_num})" if active else f"通路"
                     
@@ -199,8 +197,7 @@ with main_container:
         if st.session_state.final_df is None:
             st.error("先に『2. 名簿を読み込む』タブで名簿データを準備してください。")
         else:
-            # 💡 抽選順をご指定のルール（1列目右上から下へ、次に2列目...）に並び替える
-            # cを5から0へ降順（右から左）、rを0から6へ昇順（上から下）
+            # 抽選順：1列目の1番〜7番、次に2列目の1番〜7番...
             active_coords = []
             for c in reversed(range(6)):
                 for r in range(7):
@@ -259,13 +256,12 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
-            # スキップ処理
+            # スキップ処理 (スキップ時も席位置による確率傾斜を適用)
             def trigger_skip():
                 if st.session_state.roulette_running:
                     current_pool = df.head(num_students).copy()
                     names_pool = current_pool["名前"].tolist()
                     num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
-                    score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
                     
                     already_chosen = [v["name"] for v in st.session_state.confirmed_seats.values()]
                     for name in already_chosen:
@@ -277,9 +273,14 @@ with main_container:
                             continue
                         if not names_pool:
                             break
-                        current_scores = [score_map[n] for n in names_pool]
-                        max_score = max(current_scores) if current_scores else 100
-                        weights = [max(0.1, float((max_score + 1) - s)) for s in current_scores]
+                        
+                        # 💡 席の位置（後ろの番ほど確率アップ、1番はハズレ傾向）
+                        _, disp_num = get_seat_label(r, c)
+                        seat_weight = float(disp_num) # 1番=重み1.0, 7番=重み7.0
+                        
+                        # 全員一律のベース確率に、席ごとの引く力を掛け合わせる
+                        weights = [seat_weight for _ in names_pool]
+                        
                         winner = random.choices(names_pool, weights=weights, k=1)[0]
                         st.session_state.confirmed_seats[(r, c)] = {"name": winner, "num": num_map[winner]}
                         names_pool.remove(winner)
@@ -296,21 +297,20 @@ with main_container:
             current_pool = df.head(num_students).copy()
             names_pool = current_pool["名前"].tolist()
             num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
-            score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
 
             for idx, (r, c) in enumerate(active_coords):
                 if not st.session_state.roulette_running or not names_pool:
                     break
                 
-                current_scores = [score_map[n] for n in names_pool]
-                max_score = max(current_scores) if current_scores else 100
-                weights = [max(0.1, float((max_score + 1) - s)) for s in current_scores]
+                # 💡 ここで座席の「番」に応じて抽選確率に傾斜をつけます
+                # 1番（教卓前）は重み1.0、7番（一番後ろ）は重み7.0になり、後ろの席ほど当選しやすくなります
+                disp_col, disp_num = get_seat_label(r, c)
+                seat_weight = float(disp_num)
+                
+                weights = [seat_weight for _ in names_pool]
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
                 
                 skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
-                
-                # アニメーション中のラベル表示も修正規則を適用
-                disp_col, disp_num = get_seat_label(r, c)
                 
                 for tick in range(12):
                     if not st.session_state.roulette_running:
