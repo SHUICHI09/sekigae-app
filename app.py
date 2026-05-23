@@ -138,6 +138,13 @@ st.markdown("""
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
 
+# 右上を1-1、右下を1-7にするためのインデックス変換ヘルパー関数
+# 画面上の行 (r: 0~6), 列 (c: 0~5) を 「○列目-○番」に変換する
+def get_seat_label(r, c):
+    display_col = 6 - c  # 一番右(c=5)が1列目、一番左(c=0)が6列目
+    display_num = r + 1  # 一番上(r=0)が1番、一番下(r=6)が7番
+    return display_col, display_num
+
 main_container = st.container()
 
 with main_container:
@@ -156,7 +163,11 @@ with main_container:
                 for c in range(6):
                     active = st.session_state.seat_map[r][c]
                     b_type = "primary" if active else "secondary"
-                    b_label = f"座席 ({r+1}-{c+1})" if active else f"通路"
+                    
+                    # ラベルをご指定の規則（右上基準）に変更
+                    disp_col, disp_num = get_seat_label(r, c)
+                    b_label = f"座席 ({disp_col}-{disp_num})" if active else f"通路"
+                    
                     if cols[c].button(b_label, key=f"s_{r}_{c}", type=b_type, use_container_width=True):
                         st.session_state.seat_map[r][c] = not active
                         st.rerun()
@@ -188,7 +199,14 @@ with main_container:
         if st.session_state.final_df is None:
             st.error("先に『2. 名簿を読み込む』タブで名簿データを準備してください。")
         else:
-            active_coords = [(r, c) for r in range(7) for c in range(6) if st.session_state.seat_map[r][c]]
+            # 💡 抽選順をご指定のルール（1列目右上から下へ、次に2列目...）に並び替える
+            # cを5から0へ降順（右から左）、rを0から6へ昇順（上から下）
+            active_coords = []
+            for c in reversed(range(6)):
+                for r in range(7):
+                    if st.session_state.seat_map[r][c]:
+                        active_coords.append((r, c))
+                        
             df = st.session_state.final_df
             limit_count = min(len(active_coords), len(df))
             
@@ -209,7 +227,7 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
-            # 座席表描画関数 (点数を廃止し、上部に出席番号を配置)
+            # 座席表描画関数
             def draw_current_grid():
                 html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -235,7 +253,6 @@ with main_container:
             elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
                 roulette_placeholder.html("<div class='roulette-container' style='background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>COMPLETE</div><div class='roulette-big-name' style='color: #14532d; font-size: 54px;'>席替え完了</div></div>")
                 
-                # 最初からやり直すボタンのみを配置
                 with reset_ui_placeholder:
                     if st.button("🔄 もう一度最初からやり直す", use_container_width=True):
                         st.session_state.confirmed_seats = {}
@@ -292,11 +309,14 @@ with main_container:
                 
                 skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
                 
+                # アニメーション中のラベル表示も修正規則を適用
+                disp_col, disp_num = get_seat_label(r, c)
+                
                 for tick in range(12):
                     if not st.session_state.roulette_running:
                         break
                     dummy_name = random.choice(names_pool)
-                    roulette_placeholder.html(f"<div class='roulette-container'><div class='roulette-target-seat'>【 {r+1}列目 - {c+1}番 】の抽選中...</div><div class='roulette-big-name roulette-spinning'>{dummy_name}</div></div>")
+                    roulette_placeholder.html(f"<div class='roulette-container'><div class='roulette-target-seat'>【 {disp_col}列目 - {disp_num}番 】の抽選中...</div><div class='roulette-big-name roulette-spinning'>{dummy_name}</div></div>")
                     time.sleep(speed)
                 
                 if not st.session_state.roulette_running:
