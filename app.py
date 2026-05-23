@@ -23,8 +23,7 @@ if st.session_state.roulette_running or st.session_state.confirmed_seats:
     section[data-testid="stSidebar"] {
         display: none !important;
         width: 0px !important;
-        min-width: 0px !important;
-        max-width: 0px !important;
+        min-width: 0px !important;max-width: 0px !important;
     }
     button[aria-label="Expand sidebar"] {
         display: none !important;
@@ -138,10 +137,10 @@ st.markdown("""
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
 
-# インデックス変換ヘルパー関数 (右上を1-1、右下を1-7にする)
+# インデックス変換ヘルパー関数
 def get_seat_label(r, c):
-    display_col = 6 - c  # 一番右(c=5)が1列目、一番左(c=0)が6列目
-    display_num = r + 1  # 一番上(r=0)が1番、一番下(r=6)が7番
+    display_col = 6 - c
+    display_num = r + 1
     return display_col, display_num
 
 main_container = st.container()
@@ -162,15 +161,13 @@ with main_container:
                 for c in range(6):
                     active = st.session_state.seat_map[r][c]
                     b_type = "primary" if active else "secondary"
-                    
                     disp_col, disp_num = get_seat_label(r, c)
                     b_label = f"座席 ({disp_col}-{disp_num})" if active else f"通路"
-                    
                     if cols[c].button(b_label, key=f"s_{r}_{c}", type=b_type, use_container_width=True):
                         st.session_state.seat_map[r][c] = not active
                         st.rerun()
 
-    # --- タブ2：CSVファイル読み込み・編集タブ ---
+    # --- タブ2：CSVファイル読み込み ---
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
         with tab_csv:
             st.subheader("名簿CSVデータのインポート")
@@ -223,7 +220,7 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
-            # 座席表描画関数 (当選確率の表示スペースを追加)
+            # 座席表描画関数
             def draw_current_grid():
                 html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -256,28 +253,47 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
-            # 動的な確率の重み付け計算関数
-            def calculate_dynamic_weights(names_list, score_map, disp_num):
+            # 💡 【重要】母数40ベースで確率（％）を動的計算する関数
+            def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
                 all_scores = list(score_map.values())
                 max_score = max(all_scores) if all_scores else 100
                 min_score = min(all_scores) if all_scores else 0
                 score_range = max(1, max_score - min_score)
                 
-                weights = []
+                # 1. まず「初期の全員分（母数40等）」の重みを仮想的にすべて計算する
+                full_weights = []
+                for name in full_initial_list:
+                    student_score = float(score_map[name])
+                    norm_score = (student_score - min_score) / score_range
+                    seat_ratio = (disp_num - 1) / 6.0
+                    match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
+                    full_weights.append(max(0.05, match_factor))
+                
+                total_full_w = sum(full_weights) if sum(full_weights) > 0 else 1.0
+                
+                # 2. 全員の重み合計に対する各個人の比率から、母数40（全体で100%になる形）の確率を逆算
+                # 全員同じスコアなら、綺麗に (1.0 / 40) * 100 = 2.5% になります
+                prob_map = {}
+                for idx, name in enumerate(full_initial_list):
+                    prob_map[name] = round((full_weights[idx] / total_full_w) * 100, 1)
+                
+                # 3. 現在まだ抽選プールに残っているメンバーだけの実際の抽選用重みを抽出
+                current_weights = []
                 for name in names_list:
                     student_score = float(score_map[name])
                     norm_score = (student_score - min_score) / score_range
                     seat_ratio = (disp_num - 1) / 6.0
                     match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
-                    weight = max(0.05, match_factor)
-                    weights.append(weight)
-                return weights
+                    current_weights.append(max(0.05, match_factor))
+                    
+                return current_weights, prob_map
 
             # スキップ処理
             def trigger_skip():
                 if st.session_state.roulette_running:
                     current_pool = df.head(num_students).copy()
-                    names_pool = current_pool["名前"].tolist()
+                    full_initial_list = current_pool["名前"].tolist()
+                    names_pool = full_initial_list.copy()
                     num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
                     score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
                     
@@ -293,11 +309,7 @@ with main_container:
                             break
                         
                         _, disp_num = get_seat_label(r, c)
-                        weights = calculate_dynamic_weights(names_pool, score_map, disp_num)
-                        
-                        # 💡 当選確率をパーセンテージで計算
-                        total_w = sum(weights)
-                        prob_map = {names_pool[i]: round((weights[i] / total_w) * 100, 1) for i in range(len(names_pool))}
+                        weights, prob_map = calculate_weights_and_probs_base40(names_pool, full_initial_list, score_map, disp_num)
                         
                         winner = random.choices(names_pool, weights=weights, k=1)[0]
                         st.session_state.confirmed_seats[(r, c)] = {
@@ -317,7 +329,8 @@ with main_container:
         # --- ルーレットアニメーション処理 ---
         if st.session_state.final_df is not None and st.session_state.roulette_running:
             current_pool = df.head(num_students).copy()
-            names_pool = current_pool["名前"].tolist()
+            full_initial_list = current_pool["名前"].tolist()
+            names_pool = full_initial_list.copy()
             num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
             score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
 
@@ -326,11 +339,9 @@ with main_container:
                     break
                 
                 disp_col, disp_num = get_seat_label(r, c)
-                weights = calculate_dynamic_weights(names_pool, score_map, disp_num)
                 
-                # 💡 この席における各生徒のリアルタイム当選確率を算出(％)
-                total_w = sum(weights)
-                prob_map = {names_pool[i]: round((weights[i] / total_w) * 100, 1) for i in range(len(names_pool))}
+                # 母数40ベースの確率マップと、現在の抽選用ウェイトを取得
+                weights, prob_map = calculate_weights_and_probs_base40(names_pool, full_initial_list, score_map, disp_num)
                 
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
                 winner_prob = prob_map[winner]
@@ -347,7 +358,6 @@ with main_container:
                 if not st.session_state.roulette_running:
                     break
                 
-                # 💡 ルーレット結果表示エリアにも確率を表示
                 roulette_placeholder.html(f"<div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>【{disp_col}列-{disp_num}番】に {winner_prob}% の確率で当選！</div><div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div></div>")
                 
                 st.session_state.confirmed_seats[(r, c)] = {
@@ -357,7 +367,7 @@ with main_container:
                 }
                 draw_current_grid()
                 names_pool.remove(winner)
-                time.sleep(0.7) # 確率をみんなで確認できるように少しだけ余韻を長く(0.5s -> 0.7s)
+                time.sleep(0.7)
 
             st.session_state.roulette_running = False
             skip_btn_placeholder.empty()
