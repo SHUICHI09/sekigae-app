@@ -177,7 +177,7 @@ main_container = st.container()
 
 with main_container:
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
-        tab_setup, tab_csv, tab_run = st.tabs(["1. 座席の形を決める", "2. 名簿を読み込む", "3. ルーレットを回す"])
+        tab_setup, tab_csv, tab_run = st.tabs(["1. 座席の数を決める", "2. 名簿を読み込む", "3. ルーレットを回す"])
     else:
         tab_run = st.container()
 
