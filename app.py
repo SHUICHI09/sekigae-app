@@ -4,7 +4,7 @@ import pandas as pd
 import time
 
 # 画面設定
-st.set_page_config(page_title="PREMIUM LIGHT - 席替えアプリ", layout="wide")
+st.set_page_config(page_title="席替えアプリ", layout="wide")
 
 # --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
@@ -169,8 +169,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("PREMIUM LIGHT 席替えシステム")
-st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
+st.title("席替えシステム")
 
 def get_seat_label(r, c):
     display_col = 6 - c
