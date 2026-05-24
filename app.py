@@ -3,6 +3,8 @@ import random
 import pandas as pd
 import time
 
+st.set_page_config(page_title="席替えアプリ", layout="wide")
+
 # --- Session State の初期化 ---
 if 'seat_map' not in st.session_state:
     st.session_state.seat_map = [[True for _ in range(6)] for _ in range(7)]
@@ -165,8 +167,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-st.title("席替えシステム")
 
 def get_seat_label(r, c):
     display_col = 6 - c
