@@ -192,7 +192,7 @@ with main_container:
                     active = st.session_state.seat_map[r][c]
                     b_type = "primary" if active else "secondary"
                     disp_col, disp_num = get_seat_label(r, c)
-                    b_label = f"座席 ({disp_col}-{disp_num})" if active else f"通路"
+                    b_label = f"座席 ({disp_col}-{disp_num})" if active else f"空席"
                     if cols[c].button(b_label, key=f"s_{r}_{c}", type=b_type, use_container_width=True):
                         st.session_state.seat_map[r][c] = not active
                         st.rerun()
