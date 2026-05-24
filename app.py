@@ -23,7 +23,8 @@ if st.session_state.roulette_running or st.session_state.confirmed_seats:
     section[data-testid="stSidebar"] {
         display: none !important;
         width: 0px !important;
-        min-width: 0px !important;max-width: 0px !important;
+        min-width: 0px !important;
+        max-width: 0px !important;
     }
     button[aria-label="Expand sidebar"] {
         display: none !important;
@@ -50,7 +51,7 @@ else:
 
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# 共通パーツCSS
+# 共通パーツCSS（CSVアップローダー巨大化設定を追加）
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -131,13 +132,46 @@ st.markdown("""
         0% { transform: scale(0.98); }
         100% { transform: scale(1.02); }
     }
+    
+    /* 💡 CSVアップローダーの巨大化CSS */
+    div[data-testid="stFileUploader"] {
+        padding: 20px 0;
+    }
+    div[data-testid="stFileUploaderDropzone"] {
+        padding: 40px 20px !important;
+        border: 3px dashed #0284c7 !important;
+        background-color: #f0f9ff !important;
+        border-radius: 16px !important;
+    }
+    div[data-testid="stFileUploaderDropzone"] button {
+        font-size: 20px !important;
+        padding: 12px 24px !important;
+        background-color: #0284c7 !important;
+        color: white !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    }
+    div[data-testid="stFileUploaderDropzone"] button:hover {
+        background-color: #0369a1 !important;
+    }
+    /* ドラッグ＆ドロップの案内テキスト（大文字化） */
+    div[data-testid="stFileUploaderDropzone"] data {
+        font-size: 18px !important;
+        color: #334155 !important;
+        font-weight: bold !important;
+    }
+    /* 小さな制限事項テキスト（200MB制限など）を消すか大きくする */
+    div[data-testid="stFileUploaderDropzone"] small {
+        font-size: 14px !important;
+        color: #64748b !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("PREMIUM LIGHT 席替えシステム")
 st.caption("【ユニバーサルデザイン設計】遠くからでも見やすい白基調のスマート座席表")
 
-# インデックス変換ヘルパー関数
 def get_seat_label(r, c):
     display_col = 6 - c
     display_num = r + 1
@@ -167,11 +201,11 @@ with main_container:
                         st.session_state.seat_map[r][c] = not active
                         st.rerun()
 
-    # --- タブ2：CSVファイル読み込み ---
+    # --- タブ2：CSVファイル読み込み（巨大化適用） ---
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
         with tab_csv:
             st.subheader("名簿CSVデータのインポート")
-            uploaded_file = st.file_uploader("CSVファイルをここにドラッグ＆ドロップしてください", type=["csv"])
+            uploaded_file = st.file_uploader("ここにCSVファイルをドラッグ＆ドロップするか、ボタンから選択してください", type=["csv"])
             if uploaded_file is not None:
                 try:
                     try:
@@ -220,7 +254,6 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
-            # 座席表描画関数
             def draw_current_grid():
                 html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -253,14 +286,12 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
-            # 💡 【重要】母数40ベースで確率（％）を動的計算する関数
             def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
                 all_scores = list(score_map.values())
                 max_score = max(all_scores) if all_scores else 100
                 min_score = min(all_scores) if all_scores else 0
                 score_range = max(1, max_score - min_score)
                 
-                # 1. まず「初期の全員分（母数40等）」の重みを仮想的にすべて計算する
                 full_weights = []
                 for name in full_initial_list:
                     student_score = float(score_map[name])
@@ -271,13 +302,10 @@ with main_container:
                 
                 total_full_w = sum(full_weights) if sum(full_weights) > 0 else 1.0
                 
-                # 2. 全員の重み合計に対する各個人の比率から、母数40（全体で100%になる形）の確率を逆算
-                # 全員同じスコアなら、綺麗に (1.0 / 40) * 100 = 2.5% になります
                 prob_map = {}
                 for idx, name in enumerate(full_initial_list):
                     prob_map[name] = round((full_weights[idx] / total_full_w) * 100, 1)
                 
-                # 3. 現在まだ抽選プールに残っているメンバーだけの実際の抽選用重みを抽出
                 current_weights = []
                 for name in names_list:
                     student_score = float(score_map[name])
@@ -288,7 +316,6 @@ with main_container:
                     
                 return current_weights, prob_map
 
-            # スキップ処理
             def trigger_skip():
                 if st.session_state.roulette_running:
                     current_pool = df.head(num_students).copy()
@@ -339,8 +366,6 @@ with main_container:
                     break
                 
                 disp_col, disp_num = get_seat_label(r, c)
-                
-                # 母数40ベースの確率マップと、現在の抽選用ウェイトを取得
                 weights, prob_map = calculate_weights_and_probs_base40(names_pool, full_initial_list, score_map, disp_num)
                 
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
