@@ -50,7 +50,7 @@ else:
 
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# 共通パーツCSS（CSVアップローダー巨大化設定を追加）
+# 共通パーツCSS
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -132,7 +132,7 @@ st.markdown("""
         100% { transform: scale(1.02); }
     }
     
-    /* 💡 CSVアップローダーの巨大化CSS */
+    /* CSVアップローダーの巨大化CSS */
     div[data-testid="stFileUploader"] {
         padding: 20px 0;
     }
@@ -154,13 +154,11 @@ st.markdown("""
     div[data-testid="stFileUploaderDropzone"] button:hover {
         background-color: #0369a1 !important;
     }
-    /* ドラッグ＆ドロップの案内テキスト（大文字化） */
     div[data-testid="stFileUploaderDropzone"] data {
         font-size: 18px !important;
         color: #334155 !important;
         font-weight: bold !important;
     }
-    /* 小さな制限事項テキスト（200MB制限など）を消すか大きくする */
     div[data-testid="stFileUploaderDropzone"] small {
         font-size: 14px !important;
         color: #64748b !important;
@@ -197,7 +195,7 @@ with main_container:
                         st.session_state.seat_map[r][c] = not active
                         st.rerun()
 
-    # --- タブ2：CSVファイル読み込み（巨大化適用） ---
+    # --- タブ2：CSVファイル読み込み ---
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
         with tab_csv:
             st.subheader("名簿CSVデータのインポート")
@@ -250,6 +248,7 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
+            # --- 💡 【修正箇所】確定後の座席表示に点数を追加 ---
             def draw_current_grid():
                 html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -260,8 +259,16 @@ with main_container:
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
+                                score = st.session_state.confirmed_seats[(r, c)]["score"]  # 点数を取得
                                 prob = st.session_state.confirmed_seats[(r, c)]["prob"]
-                                html += f"<div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'><span style='font-size:13px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番</span>{name}<span style='font-size:12px; color:#0284c7; font-weight:normal; margin-top:4px; background:#ffffff; padding:1px 8px; border-radius:20px; border:1px solid #bdf0ff;'>確率: {prob}%</span></div>"
+                                
+                                html += f"""
+                                <div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'>
+                                    <span style='font-size:12px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番 ({score}点)</span>
+                                    {name}
+                                    <span style='font-size:11px; color:#0284c7; font-weight:normal; margin-top:4px; background:#ffffff; padding:1px 6px; border-radius:20px; border:1px solid #bdf0ff;'>確率: {prob}%</span>
+                                </div>
+                                """
                             else:
                                 html += "<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>"
                         else:
@@ -282,25 +289,22 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
-            # --- 💡 前方＝低点数、後方＝高点数の確率計算ロジック（修正版） ---
+            # 確率計算ロジック（4乗による超強力バイアス）
             def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
                 all_scores = list(score_map.values())
                 max_score = max(all_scores) if all_scores else 100
                 min_score = min(all_scores) if all_scores else 0
                 score_range = max(1, max_score - min_score)
                 
-                # 座席位置の割合 (教卓側 disp_num=1 → 0.0, 一番後ろ disp_num=7 → 1.0)
                 seat_ratio = (disp_num - 1) / 6.0
                 
                 full_weights = []
                 for name in full_initial_list:
                     student_score = float(score_map[name])
                     norm_score = (student_score - min_score) / score_range
-                    
-                    # 後方(seat_ratioが大きい)ほど高点数(norm_scoreが大きい)が有利
-                    # 前方(seat_ratioが小さい)ほど低点数(1.0 - norm_scoreが大きい)が有利
-                    match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
-                    full_weights.append(max(0.1, match_factor))
+                    base_match = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
+                    match_factor = base_match ** 4
+                    full_weights.append(max(0.001, match_factor))
                 
                 total_full_w = sum(full_weights) if sum(full_weights) > 0 else 1.0
                 
@@ -312,8 +316,9 @@ with main_container:
                 for name in names_list:
                     student_score = float(score_map[name])
                     norm_score = (student_score - min_score) / score_range
-                    match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
-                    current_weights.append(max(0.1, match_factor))
+                    base_match = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
+                    match_factor = base_match ** 4
+                    current_weights.append(max(0.001, match_factor))
                     
                 return current_weights, prob_map
 
@@ -343,6 +348,7 @@ with main_container:
                         st.session_state.confirmed_seats[(r, c)] = {
                             "name": winner, 
                             "num": num_map[winner],
+                            "score": int(score_map[winner]),  # スキップ時にも点数を記録
                             "prob": prob_map[winner]
                         }
                         names_pool.remove(winner)
@@ -386,9 +392,11 @@ with main_container:
                 
                 roulette_placeholder.html(f"<div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>【{disp_col}列-{disp_num}番】に {winner_prob}% の確率で当選！</div><div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div></div>")
                 
+                # 確定データに score（点数）を追加して保持
                 st.session_state.confirmed_seats[(r, c)] = {
                     "name": winner, 
                     "num": num_map[winner],
+                    "score": int(score_map[winner]),
                     "prob": winner_prob
                 }
                 draw_current_grid()
