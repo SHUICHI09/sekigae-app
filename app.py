@@ -282,19 +282,25 @@ with main_container:
                         st.session_state.roulette_running = False
                         st.rerun()
 
+            # --- 💡 前方＝低点数、後方＝高点数の確率計算ロジック（修正版） ---
             def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
                 all_scores = list(score_map.values())
                 max_score = max(all_scores) if all_scores else 100
                 min_score = min(all_scores) if all_scores else 0
                 score_range = max(1, max_score - min_score)
                 
+                # 座席位置の割合 (教卓側 disp_num=1 → 0.0, 一番後ろ disp_num=7 → 1.0)
+                seat_ratio = (disp_num - 1) / 6.0
+                
                 full_weights = []
                 for name in full_initial_list:
                     student_score = float(score_map[name])
                     norm_score = (student_score - min_score) / score_range
-                    seat_ratio = (disp_num - 1) / 6.0
+                    
+                    # 後方(seat_ratioが大きい)ほど高点数(norm_scoreが大きい)が有利
+                    # 前方(seat_ratioが小さい)ほど低点数(1.0 - norm_scoreが大きい)が有利
                     match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
-                    full_weights.append(max(0.05, match_factor))
+                    full_weights.append(max(0.1, match_factor))
                 
                 total_full_w = sum(full_weights) if sum(full_weights) > 0 else 1.0
                 
@@ -306,9 +312,8 @@ with main_container:
                 for name in names_list:
                     student_score = float(score_map[name])
                     norm_score = (student_score - min_score) / score_range
-                    seat_ratio = (disp_num - 1) / 6.0
                     match_factor = (seat_ratio * norm_score) + ((1.0 - seat_ratio) * (1.0 - norm_score))
-                    current_weights.append(max(0.05, match_factor))
+                    current_weights.append(max(0.1, match_factor))
                     
                 return current_weights, prob_map
 
