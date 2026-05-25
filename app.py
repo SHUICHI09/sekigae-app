@@ -53,7 +53,7 @@ else:
 
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# 共通パーツ ＆ 💡 半透明オーバーレイCSS
+# 共通パーツ ＆ 半透明オーバーレイCSS
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -69,57 +69,69 @@ st.markdown("""
         background-color: #10b981 !important;
         color: #ffffff !important;
         font-weight: 900 !important;
-        font-size: 20px !important;
+        font-size: 18px !important;
         border: 2px solid #10b981 !important;
         border-radius: 8px;
-        padding: 10px 20px !important;
+        padding: 8px 16px !important;
     }
     div.stButton > button[kind="secondary"] {
         background-color: #ef4444 !important;
         color: #ffffff !important;
         font-weight: 900 !important;
-        font-size: 18px !important;
+        font-size: 16px !important;
         border: 2px solid #ef4444 !important;
         border-radius: 8px;
+    }
+    
+    /* 💡 座席表全体のコンテナサイズをコンパクト化 */
+    .classroom-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 15px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
     }
     .classroom-grid {
         display: grid;
         grid-template-columns: repeat(6, 1fr);
-        gap: 16px;
-        margin-top: 20px;
+        gap: 12px;
+        margin-top: 15px;
     }
+    
+    /* 💡 座席ボックスのサイズと余白を小さく調整 */
     .seat-box {
-        border-radius: 12px;
-        padding: 20px 10px;
+        border-radius: 10px;
+        padding: 12px 6px;
         text-align: center;
         font-weight: bold;
-        font-size: 20px;
-        min-height: 110px;
+        font-size: 16px;
+        min-height: 85px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
     }
     
-    /* 💡 座席表の上に被せる半透明のレイアウト設定 */
+    /* 座席表の上に被せる半透明のレイアウト設定 */
     .roulette-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-color: rgba(15, 23, 42, 0.65); /* 背景をしっかり暗めの半透明に */
-        backdrop-filter: blur(4px); /* 背景を少しだけぼかして文字を際立たせる */
+        background-color: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(4px);
         z-index: 9999;
         display: flex;
         justify-content: center;
         align-items: center;
         flex-direction: column;
-        pointer-events: none; /* 下の要素の描画更新を邪魔しない */
+        pointer-events: none;
     }
     .roulette-container {
-        background: linear-gradient(135deg, rgba(240, 253, 244, 0.95), rgba(224, 242, 254, 0.95)); /* コンテナも高級感ある半透明に */
+        background: linear-gradient(135deg, rgba(240, 253, 244, 0.95), rgba(224, 242, 254, 0.95));
         border-radius: 24px;
         padding: 60px 40px;
         text-align: center;
@@ -204,17 +216,21 @@ with main_container:
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
         with tab_setup:
             st.subheader("使用する座席をタップして指定してください")
-            st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:15px; border-radius:8px; margin-bottom:25px; font-weight:bold; font-size:20px; border: 2px solid #0284c7;'>【教卓】（こちらが前方です）</div>", unsafe_allow_html=True)
+            st.markdown("<div style='max-width:900px; margin:0 auto 15px auto; text-align:center; background:#f1f5f9; color:#0284c7; padding:10px; border-radius:8px; font-weight:bold; font-size:18px; border: 2px solid #0284c7;'>【教卓】（こちらが前方です）</div>", unsafe_allow_html=True)
+            
+            # 設定画面側も小さめの幅に統一
+            st.markdown("<div style='max-width:900px; margin:0 auto;'>", unsafe_allow_html=True)
             for r in range(7):
                 cols = st.columns(6)
                 for c in range(6):
                     active = st.session_state.seat_map[r][c]
                     b_type = "primary" if active else "secondary"
                     disp_col, disp_num = get_seat_label(r, c)
-                    b_label = f"座席 ({disp_col}-{disp_num})" if active else f"空席"
+                    b_label = f"{disp_col}-{disp_num}" if active else f"空席"
                     if cols[c].button(b_label, key=f"s_{r}_{c}", type=b_type, use_container_width=True):
                         st.session_state.seat_map[r][c] = not active
                         st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # --- タブ2：CSVファイル読み込み ---
     if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
@@ -262,7 +278,6 @@ with main_container:
                 num_students = st.session_state.saved_num_students
                 speed = st.session_state.saved_speed
             
-            # プレースホルダーの定義（最上部に被せるためにルーレット用を一番上に配置可能に）
             roulette_placeholder = st.empty()
             start_btn_placeholder = st.empty()
             skip_btn_placeholder = st.empty()
@@ -270,9 +285,10 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
+            # 💡 コンパクト化した座席表コンテナの描画
             def draw_current_grid():
-                html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
-                html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
+                html = "<div class='classroom-container'>"
+                html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>"
                 html += "<div class='classroom-grid'>"
                 for r in range(7):
                     for c in range(6):
@@ -284,32 +300,33 @@ with main_container:
                                 prob = st.session_state.confirmed_seats[(r, c)]["prob"]
                                 html += f"""
                                 <div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'>
-                                    <span style='font-size:12px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番 ({score}点)</span>
-                                    {name}
-                                    <span style='font-size:11px; color:#0284c7; font-weight:normal; margin-top:4px; background:#ffffff; padding:1px 6px; border-radius:20px; border:1px solid #bdf0ff;'>確率: {prob}%</span>
+                                    <span style='font-size:11px; font-weight:bold; color: #0284c7; margin-bottom:1px;'>{num}番 ({score}点)</span>
+                                    <span style='font-size:18px;'>{name}</span>
+                                    <span style='font-size:10px; color:#0284c7; font-weight:normal; margin-top:2px; background:#ffffff; padding:1px 5px; border-radius:20px; border:1px solid #bdf0ff;'>確率: {prob}%</span>
                                 </div>
                                 """
                             else:
                                 html += "<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>"
                         else:
-                            html += "<div class='seat-box' style='background-color: #ffffff; border: 2px solid #f1f5f9; color: #cbd5e1; box-shadow:none; min-height:110px;'>通路</div>"
+                            html += "<div class='seat-box' style='background-color: #ffffff; border: 1px solid #f1f5f9; color: #cbd5e1; box-shadow:none; min-height:85px;'>通路</div>"
                 html += "</div></div>"
                 grid_area_placeholder.html(html)
 
             draw_current_grid()
             
-            # 通常待機時用の標準コンテナ
             if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
-                roulette_placeholder.html("<div style='background: linear-gradient(135deg, #f0fdf4, #e0f2fe); border-radius: 16px; padding: 40px 20px; text-align: center; color: #0f172a; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.15); margin-bottom: 25px; border: 4px solid #0284c7;'><div class='roulette-target-seat'>READY</div><div style='color: #94a3b8; font-size: 30px; font-weight:bold;'>「ルーレットを開始する」ボタンを押してください</div></div>")
+                roulette_placeholder.html("<div style='max-width:900px; margin: 0 auto 20px auto; background: linear-gradient(135deg, #f0fdf4, #e0f2fe); border-radius: 16px; padding: 30px 20px; text-align: center; color: #0f172a; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.15); border: 4px solid #0284c7;'><div style='font-size:24px; font-weight:800; color:#0284c7; margin-bottom:10px;'>READY</div><div style='color: #94a3b8; font-size: 24px; font-weight:bold;'>「ルーレットを開始する」ボタンを押してください</div></div>")
             elif not st.session_state.roulette_running and st.session_state.confirmed_seats:
-                roulette_placeholder.html("<div style='background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 16px; padding: 40px 20px; text-align: center; color: #14532d; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); margin-bottom: 25px; border: 4px solid #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>COMPLETE</div><div style='font-size: 40px; font-weight:900;'>席替え完了</div></div>")
+                roulette_placeholder.html("<div style='max-width:900px; margin: 0 auto 20px auto; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 16px; padding: 30px 20px; text-align: center; color: #14532d; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); border: 4px solid #10b981;'><div style='font-size:24px; font-weight:800; color:#10b981; margin-bottom:10px;'>COMPLETE</div><div style='font-size:32px; font-weight:900;'>席替え完了</div></div>")
                 
                 with reset_ui_placeholder:
+                    st.markdown("<div style='max-width:900px; margin:0 auto;'>", unsafe_allow_html=True)
                     if st.button("🔄 もう一度最初からやり直す", use_container_width=True):
                         st.session_state.confirmed_seats = {}
                         st.session_state.roulette_running = False
                         st.session_state.shuffled_coords = []
                         st.rerun()
+                    st.markdown("</div>", unsafe_allow_html=True)
 
             def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
                 all_scores = list(score_map.values())
@@ -376,6 +393,7 @@ with main_container:
                     st.session_state.roulette_running = False
 
             if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
+                st.markdown("<div style='max-width:900px; margin:0 auto;'>", unsafe_allow_html=True)
                 if start_btn_placeholder.button("ルーレットを開始する", type="primary", use_container_width=True):
                     st.session_state.confirmed_seats = {}
                     chosen_coords = active_coords[:limit_count]
@@ -383,8 +401,9 @@ with main_container:
                     st.session_state.shuffled_coords = chosen_coords
                     st.session_state.roulette_running = True
                     st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
-        # --- ルーレットアニメーション処理（半透明フルスクリーンオーバーレイ） ---
+        # --- ルーレットアニメーション処理 ---
         if st.session_state.final_df is not None and st.session_state.roulette_running:
             current_pool = df.head(num_students).copy()
             full_initial_list = current_pool["名前"].tolist()
@@ -402,10 +421,10 @@ with main_container:
                 winner = random.choices(names_pool, weights=weights, k=1)[0]
                 winner_prob = prob_map[winner]
                 
-                # スキップボタンを配置
+                st.markdown("<div style='max-width:900px; margin:0 auto;'>", unsafe_allow_html=True)
                 skip_btn_placeholder.button("演出をスキップして一瞬で結果を見る", key=f"sk_{idx}", on_click=trigger_skip, use_container_width=True)
+                st.markdown("</div>", unsafe_allow_html=True)
                 
-                # シャッフルアニメーション（被せ表示用HTMLに整形）
                 for tick in range(12):
                     if not st.session_state.roulette_running:
                         break
@@ -423,7 +442,6 @@ with main_container:
                 if not st.session_state.roulette_running:
                     break
                 
-                # 当選演出（被せ表示用HTML）
                 roulette_placeholder.html(f"""
                     <div class='roulette-overlay'>
                         <div class='roulette-container' style='background: linear-gradient(135deg, rgba(236, 253, 245, 0.95), rgba(240, 253, 244, 0.95)); border-color: #10b981;'>
@@ -440,7 +458,6 @@ with main_container:
                     "prob": winner_prob
                 }
                 
-                # 下側の座席表データをリアルタイムに更新（半透明の奥で座席が埋まるのが見える）
                 draw_current_grid()
                 names_pool.remove(winner)
                 time.sleep(0.7)
