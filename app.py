@@ -3,6 +3,7 @@ import random
 import pandas as pd
 import time
 
+# 画面設定
 st.set_page_config(page_title="席替えアプリ", layout="wide")
 
 # --- Session State の初期化 ---
@@ -14,6 +15,9 @@ if 'confirmed_seats' not in st.session_state:
     st.session_state.confirmed_seats = {}
 if 'roulette_running' not in st.session_state:
     st.session_state.roulette_running = False
+# 💡 抽選する座席の順序を保持する変数を追加
+if 'shuffled_coords' not in st.session_state:
+    st.session_state.shuffled_coords = []
 
 # --- 🛠️ サイドバー完全封鎖CSS ---
 if st.session_state.roulette_running or st.session_state.confirmed_seats:
@@ -222,6 +226,7 @@ with main_container:
         if st.session_state.final_df is None:
             st.error("先に『2. 名簿を読み込む』タブで名簿データを準備してください。")
         else:
+            # 有効な座席座標を全取得
             active_coords = []
             for c in reversed(range(6)):
                 for r in range(7):
@@ -248,7 +253,7 @@ with main_container:
             reset_ui_placeholder = st.container()
             grid_area_placeholder = st.empty()
             
-            # --- 💡 【修正箇所】確定後の座席表示に点数を追加 ---
+            # 現在の座席状態を描画する関数
             def draw_current_grid():
                 html = "<div style='padding:20px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; width:100%;'>"
                 html += "<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:12px; border-radius:8px; font-weight:bold; font-size:18px; border: 1px solid #e2e8f0; margin-bottom:15px;'>【教卓】</div>"
@@ -259,9 +264,8 @@ with main_container:
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
-                                score = st.session_state.confirmed_seats[(r, c)]["score"]  # 点数を取得
+                                score = st.session_state.confirmed_seats[(r, c)]["score"]
                                 prob = st.session_state.confirmed_seats[(r, c)]["prob"]
-                                
                                 html += f"""
                                 <div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'>
                                     <span style='font-size:12px; font-weight:bold; color: #0284c7; margin-bottom:2px;'>{num}番 ({score}点)</span>
@@ -287,9 +291,10 @@ with main_container:
                     if st.button("🔄 もう一度最初からやり直す", use_container_width=True):
                         st.session_state.confirmed_seats = {}
                         st.session_state.roulette_running = False
+                        st.session_state.shuffled_coords = []  # シャッフル順もクリア
                         st.rerun()
 
-            # 確率計算ロジック（4乗による超強力バイアス）
+            # 確率・ウェイト計算ロジック
             def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
                 all_scores = list(score_map.values())
                 max_score = max(all_scores) if all_scores else 100
@@ -322,6 +327,7 @@ with main_container:
                     
                 return current_weights, prob_map
 
+            # 💡 スキップ処理（ランダム化された順序 st.session_state.shuffled_coords をベースに処理）
             def trigger_skip():
                 if st.session_state.roulette_running:
                     current_pool = df.head(num_students).copy()
@@ -335,7 +341,7 @@ with main_container:
                         if name in names_pool:
                             names_pool.remove(name)
                     
-                    for (r, c) in active_coords:
+                    for (r, c) in st.session_state.shuffled_coords:
                         if (r, c) in st.session_state.confirmed_seats:
                             continue
                         if not names_pool:
@@ -348,7 +354,7 @@ with main_container:
                         st.session_state.confirmed_seats[(r, c)] = {
                             "name": winner, 
                             "num": num_map[winner],
-                            "score": int(score_map[winner]),  # スキップ時にも点数を記録
+                            "score": int(score_map[winner]),
                             "prob": prob_map[winner]
                         }
                         names_pool.remove(winner)
@@ -357,6 +363,12 @@ with main_container:
             if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
                 if start_btn_placeholder.button("ルーレットを開始する", type="primary", use_container_width=True):
                     st.session_state.confirmed_seats = {}
+                    
+                    # 💡 【最重要変更点】有効な座席リストを、参加人数分だけ切り取って完全にシャッフルする
+                    chosen_coords = active_coords[:limit_count]
+                    random.shuffle(chosen_coords)
+                    st.session_state.shuffled_coords = chosen_coords
+                    
                     st.session_state.roulette_running = True
                     st.rerun()
 
@@ -368,7 +380,8 @@ with main_container:
             num_map = {row["名前"]: row["出席番号"] for _, row in current_pool.iterrows()}
             score_map = {row["名前"]: row["点数"] for _, row in current_pool.iterrows()}
 
-            for idx, (r, c) in enumerate(active_coords):
+            # 💡 ループの対象を通常の active_coords から、シャッフル済みの座席リストに変更
+            for idx, (r, c) in enumerate(st.session_state.shuffled_coords):
                 if not st.session_state.roulette_running or not names_pool:
                     break
                 
@@ -392,7 +405,6 @@ with main_container:
                 
                 roulette_placeholder.html(f"<div class='roulette-container' style='background: linear-gradient(135deg, #ecfdf5, #f0fdf4); border-color: #10b981;'><div class='roulette-target-seat' style='color: #10b981;'>【{disp_col}列-{disp_num}番】に {winner_prob}% の確率で当選！</div><div class='roulette-big-name' style='color: #10b981; font-size: 85px;'>{winner}</div></div>")
                 
-                # 確定データに score（点数）を追加して保持
                 st.session_state.confirmed_seats[(r, c)] = {
                     "name": winner, 
                     "num": num_map[winner],
