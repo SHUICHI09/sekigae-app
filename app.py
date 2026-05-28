@@ -89,7 +89,7 @@ st.markdown("""
         border-radius: 12px;
     }
     
-    /* 🎯 【最重要修正】グリッド内の全ボタンを強制的に確定座席カードと同じサイズにする */
+    /* グリッド内の全ボタンを強制的に確定座席カードと同じサイズにする */
     div[data-testid="stHorizontalBlock"] div.stButton > button {
         min-height: 85px !important;
         height: 85px !important;
@@ -103,7 +103,7 @@ st.markdown("""
         line-height: 1.4 !important;
     }
     
-    /* 🎰 ルーレット動作中の赤いボタンの個別デザインとアニメーション */
+    /* ルーレット動作中の赤いボタンの個別デザインとアニメーション */
     .spinning-active div.stButton > button {
         background-color: #ef4444 !important;
         color: #ffffff !important;
@@ -353,7 +353,7 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. すでに確定済みの席 (青色のカスタムカード)
+                            # 💡 【重要修正】まず第一に「確定済みかどうか」を最優先でチェック。確定していれば絶対にボタンは出さない
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
@@ -368,7 +368,7 @@ with main_container:
                                 """
                                 st.html(html_card)
                                 
-                            # 2. 現在ルーレット回転中の席 (親要素にCSSクラスを割り当てて強制変形)
+                            # まだ確定していない場合のみ、ルーレット回転中なら赤いボタンを表示
                             elif st.session_state.roulette_running:
                                 disp_name = st.session_state.temp_display_names.get((r, c), "???")
                                 btn_label = f"抽選中...\n{disp_name}"
@@ -378,7 +378,7 @@ with main_container:
                                     st.rerun()
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 
-                            # 3. 初期状態の空席
+                            # 初期状態の空席
                             else:
                                 st.html("<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>")
                         else:
