@@ -45,7 +45,7 @@ else:
     """
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# デザインCSS（座席の高さ固定と、確定座席の完全着色）
+# デザインCSS
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -360,53 +360,57 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 (条件分岐を完全に独立させ、二重出力を徹底ガード) ---
-            st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
-            st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
+            # --- 🔥 【残像バグ完全打破】コンテナ自体を毎回フレッシュに生成し直す ---
+            grid_holder = st.empty()
             
-            for r in range(7):
-                grid_cols = st.columns(6)
-                for c in range(6):
-                    with grid_cols[c]:
-                        if st.session_state.seat_map[r][c]:
-                            # 1. 【確定】すでに決定した座席（HTMLカードで綺麗な青）
-                            if (r, c) in st.session_state.confirmed_seats:
-                                name = st.session_state.confirmed_seats[(r, c)]["name"]
-                                num = st.session_state.confirmed_seats[(r, c)]["num"]
-                                score = st.session_state.confirmed_seats[(r, c)]["score"]
-                                prob = st.session_state.confirmed_seats[(r, c)]["prob"]
-                                
-                                html_card = f"""
-                                <div class="seat-card-confirmed">
-                                    <div>{num}番 ({score}点)</div>
-                                    <div class="student-name">{name}</div>
-                                    <div class="meta-info">確率: {prob}%</div>
-                                </div>
-                                """
-                                st.markdown(html_card, unsafe_allow_html=True)
-                                
-                            # 2. 【抽選中】ルーレット回転中かつ、まだ確定していない座席（動く赤ボタン）
-                            elif st.session_state.roulette_running:
-                                disp_name = st.session_state.temp_display_names.get((r, c), "???")
-                                btn_label = f"抽選中...\n{disp_name}"
-                                
-                                st.markdown('<div class="spinning-btn">', unsafe_allow_html=True)
-                                if st.button(btn_label, key=f"roll_{r}_{c}", use_container_width=True):
-                                    stop_selected_seat(r, c)
-                                    st.rerun()
-                                st.markdown('</div>', unsafe_allow_html=True)
-                                
-                            # 3. 【初期】ルーレット開始前の空席状態
+            with grid_holder.container():
+                st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
+                
+                for r in range(7):
+                    grid_cols = st.columns(6)
+                    for c in range(6):
+                        with grid_cols[c]:
+                            if st.session_state.seat_map[r][c]:
+                                # 1. 【確定】確定済みの場合は、HTMLカードしか出力しない（ボタンは絶対生成しない）
+                                if (r, c) in st.session_state.confirmed_seats:
+                                    name = st.session_state.confirmed_seats[(r, c)]["name"]
+                                    num = st.session_state.confirmed_seats[(r, c)]["num"]
+                                    score = st.session_state.confirmed_seats[(r, c)]["score"]
+                                    prob = st.session_state.confirmed_seats[(r, c)]["prob"]
+                                    
+                                    html_card = f"""
+                                    <div class="seat-card-confirmed">
+                                        <div>{num}番 ({score}点)</div>
+                                        <div class="student-name">{name}</div>
+                                        <div class="meta-info">確率: {prob}%</div>
+                                    </div>
+                                    """
+                                    st.markdown(html_card, unsafe_allow_html=True)
+                                    
+                                # 2. 【抽選中】まだ確定してなくてルーレット稼働中なら赤ボタン
+                                elif st.session_state.roulette_running:
+                                    disp_name = st.session_state.temp_display_names.get((r, c), "???")
+                                    btn_label = f"抽選中...\n{disp_name}"
+                                    
+                                    st.markdown('<div class="spinning-btn">', unsafe_allow_html=True)
+                                    if st.button(btn_label, key=f"roll_f_{r}_{c}", use_container_width=True):
+                                        stop_selected_seat(r, c)
+                                        grid_holder.empty() # ◀ 描画コンテナのキャッシュを物理消去して強制リフレッシュ
+                                        st.rerun()
+                                    st.markdown('</div>', unsafe_allow_html=True)
+                                    
+                                # 3. 【初期】
+                                else:
+                                    st.markdown('<div class="empty-btn">', unsafe_allow_html=True)
+                                    st.button("空席", key=f"empty_init_{r}_{c}", use_container_width=True)
+                                    st.markdown('</div>', unsafe_allow_html=True)
                             else:
-                                st.markdown('<div class="empty-btn">', unsafe_allow_html=True)
-                                st.button("空席", key=f"empty_init_{r}_{c}", use_container_width=True)
+                                # 通路
+                                st.markdown('<div class="aisle-btn">', unsafe_allow_html=True)
+                                st.button("通路", key=f"aisle_init_{r}_{c}", use_container_width=True)
                                 st.markdown('</div>', unsafe_allow_html=True)
-                        else:
-                            # 通路
-                            st.markdown('<div class="aisle-btn">', unsafe_allow_html=True)
-                            st.button("通路", key=f"aisle_init_{r}_{c}", use_container_width=True)
-                            st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
             
             if st.session_state.roulette_running and not is_complete:
                 time.sleep(0.08)
