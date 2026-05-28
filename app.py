@@ -360,7 +360,7 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 (keyの完全固定によるゴーストボタン完全撲滅版) ---
+            # --- 座席グリッドの描画 (インデント・HTML閉じタグ完全修正版) ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
@@ -369,7 +369,7 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. 【確定】すでに決定した座席（HTMLカードで綺麗な青）
+                            # 1. 【確定】
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
@@ -385,19 +385,18 @@ with main_container:
                                 """
                                 st.markdown(html_card, unsafe_allow_html=True)
                                 
-                            # 2. 【抽選中】ルーレット回転中かつ、まだ確定していない座席（動く赤ボタン）
+                            # 2. 【抽選中】
                             elif st.session_state.roulette_running:
                                 disp_name = st.session_state.temp_display_names.get((r, c), "???")
                                 btn_label = f"抽選中...\n{disp_name}"
                                 
                                 st.markdown('<div class="spinning-btn">', unsafe_allow_html=True)
-                                # 🔥 CRITICAL CHANGE: keyを名前から完全に切り離し、rとcの座標だけで完全固定！
-                                if st.button(btn_label, key=f"roll_btn_coord_{r}_{c}", use_container_width=True):
+                                if st.button(btn_label, key=f"roll_btn_coord_fix_{r}_{c}", use_container_width=True):
                                     stop_selected_seat(r, c)
                                     st.rerun()
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 
-                            # 3. 【初期】ルーレット開始前の空席状態
+                            # 3. 【初期】
                             else:
                                 st.markdown('<div class="empty-btn">', unsafe_allow_html=True)
                                 st.button("空席", key=f"empty_init_{r}_{c}", use_container_width=True)
@@ -407,6 +406,8 @@ with main_container:
                             st.markdown('<div class="aisle-btn">', unsafe_allow_html=True)
                             st.button("通路", key=f"aisle_init_{r}_{c}", use_container_width=True)
                             st.markdown('</div>', unsafe_allow_html=True)
+                            
+            # 🔥 【完全修正】ループの外、かつ全体の最後できっちり大箱のdivを閉じる
             st.markdown("</div>", unsafe_allow_html=True)
             
             if st.session_state.roulette_running and not is_complete:
