@@ -360,7 +360,7 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 (条件分岐を完全に独立させ、二重描画を徹底排除) ---
+            # --- 座席グリッドの描画 (条件分岐を完全に独立させ、二重出力を徹底ガード) ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
@@ -369,7 +369,7 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. 【確定】すでに決定した座席（HTMLカードで綺麗な青）※決定後は下のルーレット用ボタンは絶対出さない
+                            # 1. 【確定】すでに決定した座席（HTMLカードで綺麗な青）
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
