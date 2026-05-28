@@ -58,7 +58,6 @@ st.markdown("""
         border-bottom-color: #0284c7 !important;
     }
     
-    /* Streamlit標準ボタンの共通スタイル調整 */
     div.stButton > button {
         border-radius: 10px !important;
         font-weight: bold !important;
@@ -89,24 +88,24 @@ st.markdown("""
         border-radius: 12px;
     }
     
-    /* 💡 シャッフル中ボタン（ルーレット状態）専用のスタイルとアニメーション */
+    /* 💡 抽選中ボタンを確定済み座席ボックスと同じ大きさに調整 */
     div.stButton > button.spinning-btn {
-        background-color: #fef3c7 !important;
-        color: #d97706 !important;
-        border: 2px solid #f59e0b !important;
+        background-color: #ef4444 !important; /* 目立つように元の赤色ベースに調整 */
+        color: #ffffff !important;
+        border: 2px solid #dc2626 !important;
         min-height: 85px !important;
         font-size: 16px !important;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        white-space: pre-line !important;
         animation: seat-shake 0.15s infinite alternate;
-        box-shadow: 0 3px 8px rgba(245, 158, 11, 0.2) !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15) !important;
     }
     div.stButton > button.spinning-btn:hover {
-        background-color: #fffbeb !important;
-        border-color: #d97706 !important;
-        color: #b45309 !important;
+        background-color: #f87171 !important;
+        border-color: #ef4444 !important;
     }
     
     @keyframes seat-shake {
@@ -114,7 +113,6 @@ st.markdown("""
         100% { transform: translateY(1px) scale(1.01); }
     }
     
-    /* 確定済み・空席・通路の静的ボックス用スタイル */
     .seat-box {
         border-radius: 10px;
         padding: 12px 6px;
@@ -129,7 +127,6 @@ st.markdown("""
         box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
     }
     
-    /* CSVアップローダー用 */
     div[data-testid="stFileUploaderDropzone"] {
         padding: 40px 20px !important;
         border: 3px dashed #0284c7 !important;
@@ -143,7 +140,6 @@ def get_seat_label(r, c):
     display_num = r + 1
     return display_col, display_num
 
-# 点数に応じた確率重み計算ロジック
 def calculate_weights_and_probs_base40(names_list, full_initial_list, score_map, disp_num):
     all_scores = list(score_map.values())
     max_score = max(all_scores) if all_scores else 100
@@ -243,7 +239,7 @@ with main_container:
             
             control_placeholder = st.empty()
             
-            # 💡 座席クリック時の確定処理関数
+            # 💡 座席クリック時の確定処理（終了判定ロジックを強化）
             def stop_selected_seat(click_r, click_c):
                 current_pool = df.head(num_students).copy()
                 full_initial_list = current_pool["名前"].tolist()
@@ -257,7 +253,6 @@ with main_container:
                 if names_pool and (click_r, click_c) not in st.session_state.confirmed_seats:
                     _, disp_num = get_seat_label(click_r, click_c)
                     
-                    # 🔥 選択された座席位置と点数に基づく元のロジックで抽選
                     weights, prob_map = calculate_weights_and_probs_base40(names_pool, full_initial_list, score_map, disp_num)
                     winner = random.choices(names_pool, weights=weights, k=1)[0]
                     
@@ -268,12 +263,11 @@ with main_container:
                         "prob": prob_map[winner]
                     }
                     
-                    # 残りの抽選が必要な席があるか確認
-                    rem_seats = [coords for coords in st.session_state.shuffled_coords if coords not in st.session_state.confirmed_seats]
-                    if not rem_seats or len(already_chosen) + 1 >= num_students:
+                    # 💡 【重要修正】実際に埋まった総数と参加人数を直接比較して判定
+                    if len(st.session_state.confirmed_seats) >= num_students:
                         st.session_state.roulette_running = False
 
-            # 一括ストップ処理
+            # 一括ストップ処理（終了判定を確実に実行）
             def skip_all_roulette():
                 current_pool = df.head(num_students).copy()
                 full_initial_list = current_pool["名前"].tolist()
@@ -301,8 +295,11 @@ with main_container:
                     }
                 st.session_state.roulette_running = False
 
-            # --- UIコントロール部分 ---
-            if not st.session_state.roulette_running and not st.session_state.confirmed_seats:
+            # --- UI表示状態の分岐（ここで完全にコントロールされるよう整理） ---
+            # すべての人数分確定したかチェック
+            is_complete = len(st.session_state.confirmed_seats) >= num_students if st.session_state.confirmed_seats else False
+
+            if not st.session_state.roulette_running and not is_complete:
                 with control_placeholder.container():
                     st.markdown("<div style='max-width:900px; margin:0 auto;'>", unsafe_allow_html=True)
                     if st.button("🎰 ルーレットを開始する（全席シャッフル）", type="primary", use_container_width=True):
@@ -313,14 +310,13 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
                     
-            elif st.session_state.roulette_running:
+            elif st.session_state.roulette_running and not is_complete:
                 with control_placeholder.container():
                     st.markdown("<div style='max-width:900px; margin:0 auto; text-align:center;'>", unsafe_allow_html=True)
                     st.markdown("<h3 style='color:#d97706; margin-bottom:5px;'>👉 止めたい座席を直接クリックしてください！</h3>", unsafe_allow_html=True)
                     st.button("⏩ 残りの席を一瞬で全部止める", on_click=skip_all_roulette, use_container_width=True)
                     st.markdown("</div>", unsafe_allow_html=True)
                     
-                # 動いている席用にダミーの生徒名をランダム生成
                 current_pool = df.head(num_students).copy()
                 names_pool = current_pool["名前"].tolist()
                 already_chosen = [v["name"] for v in st.session_state.confirmed_seats.values()]
@@ -331,6 +327,7 @@ with main_container:
                         st.session_state.temp_display_names[(r, c)] = random.choice(available_names)
                         
             else:
+                # 💡 完全に埋まりきった、もしくは初期化後の完了画面
                 with control_placeholder.container():
                     st.markdown("<div style='max-width:900px; margin:0 auto;'>", unsafe_allow_html=True)
                     st.success("🎉 すべての座席が確定しました！")
@@ -338,20 +335,20 @@ with main_container:
                         st.session_state.confirmed_seats = {}
                         st.session_state.roulette_running = False
                         st.session_state.shuffled_coords = []
+                        st.session_state.temp_display_names = {}
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 💡 座席グリッドの描画 (ボタン・カスタムボックスの混在レイアウト) ---
+            # --- 座席グリッドの描画 ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
-            # st.columnsで6列のグリッドを構築
             for r in range(7):
                 grid_cols = st.columns(6)
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. すでに確定済みの席 (静的HTML)
+                            # 1. すでに確定済みの席
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
@@ -366,37 +363,35 @@ with main_container:
                                 """
                                 st.html(html_card)
                                 
-                            # 2. 現在ルーレット回転中の席 (クリック可能なカスタムボタン)
+                            # 2. 現在ルーレット回転中の席（サイズを大幅に巨大化＆改行対応）
                             elif st.session_state.roulette_running:
                                 disp_name = st.session_state.temp_display_names.get((r, c), "???")
-                                # CSSクラス 'spinning-btn' を適用して揺らす
-                                st.markdown('<div class="spinning-parent">', unsafe_allow_html=True)
-                                if st.button(f"抽選中...\n{disp_name}", key=f"roll_{r}_{c}", use_container_width=True):
+                                btn_label = f"抽選中...\n{disp_name}"
+                                if st.button(btn_label, key=f"roll_{r}_{c}", use_container_width=True):
                                     stop_selected_seat(r, c)
                                     st.rerun()
-                                st.markdown('</div>', unsafe_allow_html=True)
                                 
-                                # CSSクラスをStreamlitのボタンへ強制インジェクション
+                                # JavaScriptでボタンクラスをインジェクション（改行対応の高さにするための補助）
                                 st.markdown(f"""
                                     <script>
                                     var buttons = window.parent.document.querySelectorAll('button');
                                     buttons.forEach(function(btn) {{
-                                        if(btn.innerText.toLowerString().indexOf('{disp_name}') !== -1 || btn.innerText.indexOf('抽選中') !== -1) {{
+                                        if(btn.innerText.indexOf('抽選中') !== -1) {{
                                             btn.classList.add('spinning-btn');
                                         }}
                                     }});
                                     </script>
                                 """, unsafe_allow_html=True)
                                 
-                            # 3. まだ始まっていない初期状態の空席 (静的HTML)
+                            # 3. 初期状態の空席
                             else:
                                 st.html("<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>")
                         else:
-                            # 通路 (静的HTML)
+                            # 通路
                             st.html("<div class='seat-box' style='background-color: #ffffff; border: 1px solid #f1f5f9; color: #cbd5e1; box-shadow:none; min-height:85px;'>通路</div>")
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # ルーレット回転中は裏で名前をシャッフルし続けるため自動再描画
-            if st.session_state.roulette_running:
+            # ルーレットが動いている間だけ画面を高速再描画
+            if st.session_state.roulette_running and not is_complete:
                 time.sleep(0.08)
                 st.rerun()
