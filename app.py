@@ -66,7 +66,7 @@ st.markdown("""
         border-radius: 12px;
     }
     
-    /* 🎯 【超重要】座席グリッド内のすべてのボタンの高さを一律 85px に強制固定 */
+    /* 座席グリッド内のすべてのボタンの高さを一律 85px に強制固定 */
     div[data-testid="stHorizontalBlock"] div.stButton > button {
         min-height: 85px !important;
         height: 85px !important;
@@ -95,13 +95,13 @@ st.markdown("""
         border-color: #ef4444 !important;
     }
     
-    /* 💎 ② 確定した座席（青ボタン化）のスタイル */
+    /* 💎 ② 確定した座席（青ボタン）のスタイル（完了画面でもしっかり色を維持！） */
     div[data-testid="stHorizontalBlock"] div.confirmed-btn > button {
         background-color: #e0f2fe !important;
         color: #0369a1 !important;
         border: 2px solid #0ea5e9 !important;
         box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05) !important;
-        pointer-events: none !important; /* 確定後はクリック無効化 */
+        pointer-events: none !important; /* クリック無効化 */
     }
     
     /* ⚙️ ③ 初期状態の空席・通路・設定用ボタン */
@@ -341,7 +341,7 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 (完全ワントラック設計) ---
+            # --- 座席グリッドの描画 ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
@@ -350,13 +350,14 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. 【最優先】すでに確定済みの席 (青色のボタン表示)
+                            # 1. すでに確定済みの席 (青色のスタイリッシュなボタン表示)
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
                                 score = st.session_state.confirmed_seats[(r, c)]["score"]
                                 prob = st.session_state.confirmed_seats[(r, c)]["prob"]
                                 
+                                # 文字のサイズ感と配置をキレイに調整
                                 label = f"{num}番 ({score}点)\n{name}\n確率: {prob}%"
                                 st.markdown('<div class="confirmed-btn">', unsafe_allow_html=True)
                                 st.button(label, key=f"fixed_{r}_{c}", use_container_width=True)
