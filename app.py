@@ -45,7 +45,7 @@ else:
     """
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# デザインCSS
+# デザインCSS（すべてのボタンの高さを完全に固定）
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -57,29 +57,6 @@ st.markdown("""
         border-bottom-color: #0284c7 !important;
     }
     
-    /* 共通ボタンの角丸設定 */
-    div.stButton > button {
-        border-radius: 10px !important;
-        font-weight: bold !important;
-    }
-    
-    /* 設定ややり直し用の緑・赤通常ボタン */
-    div.stButton > button[kind="primary"] {
-        background-color: #10b981 !important;
-        color: #ffffff !important;
-        font-weight: 900 !important;
-        font-size: 20px !important;
-        border: 2px solid #10b981 !important;
-        padding: 10px 20px !important;
-    }
-    div.stButton > button[kind="secondary"] {
-        background-color: #ef4444 !important;
-        color: #ffffff !important;
-        font-weight: 900 !important;
-        font-size: 16px !important;
-        border: 2px solid #ef4444 !important;
-    }
-    
     .classroom-container {
         max-width: 1200px;
         margin: 0 auto;
@@ -89,53 +66,73 @@ st.markdown("""
         border-radius: 12px;
     }
     
-    /* グリッド内の全ボタンを強制的に確定座席カードと同じサイズにする */
+    /* 🎯 【超重要】座席グリッド内のすべてのボタンの高さを一律 85px に強制固定 */
     div[data-testid="stHorizontalBlock"] div.stButton > button {
         min-height: 85px !important;
         height: 85px !important;
-        font-size: 16px !important;
+        border-radius: 10px !important;
+        font-size: 15px !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
         align-items: center !important;
-        padding: 4px 4px !important;
+        padding: 4px !important;
         white-space: pre-line !important;
-        line-height: 1.4 !important;
+        line-height: 1.3 !important;
+        font-weight: bold !important;
     }
     
-    /* ルーレット動作中の赤いボタンの個別デザインとアニメーション */
-    .spinning-active div.stButton > button {
+    /* 🎰 ① ルーレット回転中（赤ボタン）のスタイル */
+    div[data-testid="stHorizontalBlock"] div.spinning-btn > button {
         background-color: #ef4444 !important;
         color: #ffffff !important;
         border: 2px solid #dc2626 !important;
         box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
         animation: seat-shake 0.15s infinite alternate;
     }
-    .spinning-active div.stButton > button:hover {
+    div[data-testid="stHorizontalBlock"] div.spinning-btn > button:hover {
         background-color: #f87171 !important;
         border-color: #ef4444 !important;
+    }
+    
+    /* 💎 ② 確定した座席（青ボタン化）のスタイル */
+    div[data-testid="stHorizontalBlock"] div.confirmed-btn > button {
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+        border: 2px solid #0ea5e9 !important;
+        box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05) !important;
+        pointer-events: none !important; /* 確定後はクリック無効化 */
+    }
+    
+    /* ⚙️ ③ 初期状態の空席・通路・設定用ボタン */
+    div[data-testid="stHorizontalBlock"] div.empty-btn > button {
+        background-color: #f8fafc !important;
+        border: 2px dashed #cbd5e1 !important;
+        color: #64748b !important;
+        pointer-events: none !important;
+    }
+    div[data-testid="stHorizontalBlock"] div.aisle-btn > button {
+        background-color: #ffffff !important;
+        border: 1px solid #f1f5f9 !important;
+        color: #cbd5e1 !important;
+        box-shadow: none !important;
+        pointer-events: none !important;
+    }
+    
+    /* 上部コントロール用の通常ボタン */
+    div.stButton > button[kind="primary"] {
+        background-color: #10b981 !important;
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        font-size: 20px !important;
+        border: 2px solid #10b981 !important;
+        padding: 10px 20px !important;
+        border-radius: 10px !important;
     }
     
     @keyframes seat-shake {
         0% { transform: translateY(-1px) scale(0.99); }
         100% { transform: translateY(1px) scale(1.01); }
-    }
-    
-    /* 確定済み・空席・通路のボックスサイズ */
-    .seat-box {
-        border-radius: 10px;
-        padding: 8px 4px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 16px;
-        min-height: 85px;
-        height: 85px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05);
-        box-sizing: border-box;
     }
     
     div[data-testid="stFileUploaderDropzone"] {
@@ -344,7 +341,7 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 ---
+            # --- 座席グリッドの描画 (完全ワントラック設計) ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
@@ -353,37 +350,39 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 💡 【重要修正】まず第一に「確定済みかどうか」を最優先でチェック。確定していれば絶対にボタンは出さない
+                            # 1. 【最優先】すでに確定済みの席 (青色のボタン表示)
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
                                 score = st.session_state.confirmed_seats[(r, c)]["score"]
                                 prob = st.session_state.confirmed_seats[(r, c)]["prob"]
-                                html_card = f"""
-                                <div class='seat-box' style='background-color: #e0f2fe; color: #0369a1; border: 2px solid #0ea5e9;'>
-                                    <span style='font-size:11px; font-weight:bold; color: #0284c7; margin-bottom:1px;'>{num}番 ({score}点)</span>
-                                    <span style='font-size:18px;'>{name}</span>
-                                    <span style='font-size:10px; color:#0284c7; font-weight:normal; margin-top:2px; background:#ffffff; padding:1px 5px; border-radius:20px; border:1px solid #bdf0ff;'>確率: {prob}%</span>
-                                </div>
-                                """
-                                st.html(html_card)
                                 
-                            # まだ確定していない場合のみ、ルーレット回転中なら赤いボタンを表示
+                                label = f"{num}番 ({score}点)\n{name}\n確率: {prob}%"
+                                st.markdown('<div class="confirmed-btn">', unsafe_allow_html=True)
+                                st.button(label, key=f"fixed_{r}_{c}", use_container_width=True)
+                                st.markdown('</div>', unsafe_allow_html=True)
+                                
+                            # 2. ルーレット回転中の席 (赤色のボタン表示)
                             elif st.session_state.roulette_running:
                                 disp_name = st.session_state.temp_display_names.get((r, c), "???")
                                 btn_label = f"抽選中...\n{disp_name}"
-                                st.markdown('<div class="spinning-active">', unsafe_allow_html=True)
+                                
+                                st.markdown('<div class="spinning-btn">', unsafe_allow_html=True)
                                 if st.button(btn_label, key=f"roll_{r}_{c}", use_container_width=True):
                                     stop_selected_seat(r, c)
                                     st.rerun()
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 
-                            # 初期状態の空席
+                            # 3. まだ始まっていない初期状態の空席
                             else:
-                                st.html("<div class='seat-box' style='background-color: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b;'>空席</div>")
+                                st.markdown('<div class="empty-btn">', unsafe_allow_html=True)
+                                st.button("空席", key=f"empty_init_{r}_{c}", use_container_width=True)
+                                st.markdown('</div>', unsafe_allow_html=True)
                         else:
                             # 通路
-                            st.html("<div class='seat-box' style='background-color: #ffffff; border: 1px solid #f1f5f9; color: #cbd5e1; box-shadow:none;'>通路</div>")
+                            st.markdown('<div class="aisle-btn">', unsafe_allow_html=True)
+                            st.button("通路", key=f"aisle_init_{r}_{c}", use_container_width=True)
+                            st.markdown('</div>', unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
             
             if st.session_state.roulette_running and not is_complete:
