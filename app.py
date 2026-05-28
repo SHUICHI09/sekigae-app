@@ -45,7 +45,7 @@ else:
     """
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# デザインCSS（抽選ボタンの高さ固定と、確定座席の完全着色）
+# デザインCSS（座席の高さ固定と、確定座席の完全着色）
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -85,7 +85,7 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* 💎 ② 【解決策】確定した座席ブロック（HTMLカード）のスタイリング */
+    /* 💎 ② 確定した座席ブロック（HTMLカード）のスタイリング */
     .seat-card-confirmed {
         min-height: 85px;
         height: 85px;
@@ -360,7 +360,7 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 ---
+            # --- 座席グリッドの描画 (条件分岐を完全に独立させ、二重描画を徹底排除) ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
@@ -369,7 +369,7 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. 【最優先：確定座席】Streamlitの標準ボタンを使わず、HTMLカードで青色を絶対固定
+                            # 1. 【確定】すでに決定した座席（HTMLカードで綺麗な青）※決定後は下のルーレット用ボタンは絶対出さない
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
@@ -385,7 +385,7 @@ with main_container:
                                 """
                                 st.markdown(html_card, unsafe_allow_html=True)
                                 
-                            # 2. ルーレット回転中の席 (Streamlitの動く赤ボタン)
+                            # 2. 【抽選中】ルーレット回転中かつ、まだ確定していない座席（動く赤ボタン）
                             elif st.session_state.roulette_running:
                                 disp_name = st.session_state.temp_display_names.get((r, c), "???")
                                 btn_label = f"抽選中...\n{disp_name}"
@@ -396,7 +396,7 @@ with main_container:
                                     st.rerun()
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 
-                            # 3. 初期状態の空席
+                            # 3. 【初期】ルーレット開始前の空席状態
                             else:
                                 st.markdown('<div class="empty-btn">', unsafe_allow_html=True)
                                 st.button("空席", key=f"empty_init_{r}_{c}", use_container_width=True)
