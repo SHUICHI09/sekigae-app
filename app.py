@@ -27,8 +27,7 @@ if st.session_state.roulette_running or st.session_state.confirmed_seats:
     section[data-testid="stSidebar"] {
         display: none !important;
         width: 0px !important;
-        min-width: 0px !important;
-        max-width: 0px !important;
+        min-width: 0px !important;max-width: 0px !important;
     }
     button[aria-label="Expand sidebar"] {
         display: none !important;
@@ -45,7 +44,7 @@ else:
     """
 st.markdown(sidebar_style, unsafe_allow_html=True)
 
-# デザインCSS（すべてのボタンの高さを完全に固定）
+# デザインCSS（すべての状態のボタン色をCSSで強制指定）
 st.markdown("""
     <style>
     button[data-baseweb="tab"] {
@@ -66,7 +65,7 @@ st.markdown("""
         border-radius: 12px;
     }
     
-    /* 座席グリッド内のすべてのボタンの高さを一律 85px に強制固定 */
+    /* 🎯 座席グリッド内のすべてのボタンの高さを一律 85px に強制固定 */
     div[data-testid="stHorizontalBlock"] div.stButton > button {
         min-height: 85px !important;
         height: 85px !important;
@@ -82,7 +81,7 @@ st.markdown("""
         font-weight: bold !important;
     }
     
-    /* 🎰 ① ルーレット回転中（赤ボタン）のスタイル */
+    /* 🎰 ① ルーレット回転中（赤ボタン）の色とアニメーションを強制適用 */
     div[data-testid="stHorizontalBlock"] div.spinning-btn > button {
         background-color: #ef4444 !important;
         color: #ffffff !important;
@@ -95,13 +94,13 @@ st.markdown("""
         border-color: #ef4444 !important;
     }
     
-    /* 💎 ② 確定した座席（青ボタン）のスタイル（完了画面でもしっかり色を維持！） */
+    /* 💎 ② 確定した座席（青ボタン）の色を強制適用（完了画面でもしっかりキープ！） */
     div[data-testid="stHorizontalBlock"] div.confirmed-btn > button {
         background-color: #e0f2fe !important;
         color: #0369a1 !important;
         border: 2px solid #0ea5e9 !important;
         box-shadow: 0 3px 8px rgba(15, 23, 42, 0.05) !important;
-        pointer-events: none !important; /* クリック無効化 */
+        pointer-events: none !important; /* 確定後はクリックを無効化 */
     }
     
     /* ⚙️ ③ 初期状態の空席・通路・設定用ボタン */
@@ -341,7 +340,7 @@ with main_container:
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            # --- 座席グリッドの描画 ---
+            # --- 座席グリッドの描画 (HTMLラッパーにクラスを設定し、CSS側で色を強制注入) ---
             st.markdown("<div class='classroom-container'>", unsafe_allow_html=True)
             st.markdown("<div style='text-align:center; background:#f1f5f9; color:#0284c7; padding:8px; border-radius:6px; font-weight:bold; font-size:16px; border: 1px solid #e2e8f0; margin-bottom:10px;'>【教卓】</div>", unsafe_allow_html=True)
             
@@ -350,20 +349,19 @@ with main_container:
                 for c in range(6):
                     with grid_cols[c]:
                         if st.session_state.seat_map[r][c]:
-                            # 1. すでに確定済みの席 (青色のスタイリッシュなボタン表示)
+                            # 1. 既に確定済みの席 (きれいな青色のボタン)
                             if (r, c) in st.session_state.confirmed_seats:
                                 name = st.session_state.confirmed_seats[(r, c)]["name"]
                                 num = st.session_state.confirmed_seats[(r, c)]["num"]
                                 score = st.session_state.confirmed_seats[(r, c)]["score"]
                                 prob = st.session_state.confirmed_seats[(r, c)]["prob"]
                                 
-                                # 文字のサイズ感と配置をキレイに調整
                                 label = f"{num}番 ({score}点)\n{name}\n確率: {prob}%"
                                 st.markdown('<div class="confirmed-btn">', unsafe_allow_html=True)
                                 st.button(label, key=f"fixed_{r}_{c}", use_container_width=True)
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 
-                            # 2. ルーレット回転中の席 (赤色のボタン表示)
+                            # 2. ルーレット回転中の席 (鮮やかな赤色の動くボタン)
                             elif st.session_state.roulette_running:
                                 disp_name = st.session_state.temp_display_names.get((r, c), "???")
                                 btn_label = f"抽選中...\n{disp_name}"
@@ -374,7 +372,7 @@ with main_container:
                                     st.rerun()
                                 st.markdown('</div>', unsafe_allow_html=True)
                                 
-                            # 3. まだ始まっていない初期状態の空席
+                            # 3. 初期状態の空席
                             else:
                                 st.markdown('<div class="empty-btn">', unsafe_allow_html=True)
                                 st.button("空席", key=f"empty_init_{r}_{c}", use_container_width=True)
